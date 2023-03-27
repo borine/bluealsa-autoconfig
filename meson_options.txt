@@ -1,0 +1,2 @@
+option('doc', type: 'boolean', value: false, description: 'Build manual pages')
+
