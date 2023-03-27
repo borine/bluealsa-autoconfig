@@ -46,6 +46,24 @@ autoconfig = build_target(
 	install_dir: bindir,
 )
 
+alsa_plugin_dir = join_paths(
+	alsa_dep.get_pkgconfig_variable('libdir'),
+	'alsa-lib'
+)
+
+asound_module_sources = [
+	'bluealsa-hook.c',
+]
+
+asound_module = shared_library(
+	'asound_module_hook_bluealsa_autoconfig',
+	asound_module_sources,
+	dependencies: [ alsa_dep ],
+	c_args: '-DPIC',
+	install: true,
+	install_dir: alsa_plugin_dir,
+)
+
 install_data(
 	'21-bluealsa-autoconfig.conf',
 	install_dir: alsaconfdir,
