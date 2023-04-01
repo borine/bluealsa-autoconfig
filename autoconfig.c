@@ -34,7 +34,7 @@
 #define BLUEALSA_AUTOCONFIG_CONFIG_FILE BLUEALSA_AUTOCONFIG_CONFIG_DIR "/bluealsa-autoconfig.conf"
 #define BLUEALSA_AUTOCONFIG_TEMP_FILE BLUEALSA_AUTOCONFIG_CONFIG_DIR "/.bluealsa-autoconfig.tmp"
 #define BLUEALSA_AUTOCONFIG_CONFIG_TEMPLATE "%n %p (%c)%lBluetooth Audio %s"
-#define BLUEALSA_AUTOCONFIG_RUN_DIR  "/run/bluealsa-autoconfig/"
+#define BLUEALSA_AUTOCONFIG_RUN_DIR  "/run/bluealsa-autoconfig"
 #define BLUEALSA_AUTOCONFIG_DEFAULTS_FILE  BLUEALSA_AUTOCONFIG_RUN_DIR "/defaults.conf"
 #define BLUEALSA_AUTOCONFIG_LOCK_FILE  BLUEALSA_AUTOCONFIG_RUN_DIR "/lock"
 
@@ -85,6 +85,7 @@ static void bluealsa_autoconfig_udev_trigger(void) {
 }
 
 static int bluealsa_autoconfig_init_alsa(const char *progname) {
+	int fd;
 
 	/* Ensure the required directories exist */
 	int ret = mkdir(BLUEALSA_AUTOCONFIG_CONFIG_DIR, 0775);
@@ -101,14 +102,19 @@ static int bluealsa_autoconfig_init_alsa(const char *progname) {
 		return -1;
 	}
 
-	/* Delete the defaults file */
-	unlink(BLUEALSA_AUTOCONFIG_DEFAULTS_FILE);
+	/* Clear the defaults file */
+	fd = open(BLUEALSA_AUTOCONFIG_DEFAULTS_FILE, O_CREAT|O_RDWR|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH);
+	if (fd < 0 && defaults) {
+		warn("Unable to open defaults file %s: %s\n", BLUEALSA_AUTOCONFIG_DEFAULTS_FILE, strerror(errno));
+	}
+	else
+		close(fd);
 
 	/* To prevent two instances of this program running,
 	 * we create an exclusive lock file. The file descriptor, and therefore the
 	 * lock on it, will be released automatically by the kernel when this
 	 * program instance terminates. */
-	int fd = open(BLUEALSA_AUTOCONFIG_LOCK_FILE, O_CREAT|O_RDWR|O_TRUNC, S_IRUSR|S_IWUSR);
+	fd = open(BLUEALSA_AUTOCONFIG_LOCK_FILE, O_CREAT|O_RDWR|O_TRUNC, S_IRUSR|S_IWUSR);
 	if (fd < 0) {
 		error("Unable to create lock file %s: %s\n", BLUEALSA_AUTOCONFIG_LOCK_FILE, strerror(errno));
 		return -1;
