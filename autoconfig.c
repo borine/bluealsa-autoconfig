@@ -96,7 +96,6 @@ static int bluealsa_autoconfig_init_alsa(const char *progname) {
 
 	mode_t mask = umask(~(S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH));
 	ret = mkdir(BLUEALSA_AUTOCONFIG_RUN_DIR, 0775);
-	umask(mask);
 	if (ret < 0 && errno != EEXIST) {
 		error(BLUEALSA_AUTOCONFIG_RUN_DIR ": %s\n", strerror(errno));
 		return -1;
@@ -109,6 +108,7 @@ static int bluealsa_autoconfig_init_alsa(const char *progname) {
 	}
 	else
 		close(fd);
+	umask(mask);
 
 	/* To prevent two instances of this program running,
 	 * we create an exclusive lock file. The file descriptor, and therefore the
