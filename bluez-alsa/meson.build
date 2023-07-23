@@ -10,6 +10,7 @@ bluez_alsa_deps = [
 	alsa_dep,
 	bluez_dep,
 	dbus_dep,
+	gio_dep,
 ]
 
 bluez_alsa_includes = [

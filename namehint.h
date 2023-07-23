@@ -1,5 +1,5 @@
 /*
- * BlueALSA - namehint.h
+ * bluealsa-autoconfig - namehint.h
  * Copyright (c) 2023 @borine (https://github.com/borine/)
  *
  * This project is licensed under the terms of the MIT license.

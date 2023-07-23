@@ -1,5 +1,5 @@
 /*
- * BlueALSA - bluealsa-client.c
+ * bluealsa-autoconfig - bluealsa-client.c
  * Copyright (c) 2023 @borine (https://github.com/borine/)
  *
  * This project is licensed under the terms of the MIT license.
@@ -36,6 +36,8 @@ static const char *bluealsa_client_get_unique_name(DBusConnection *conn, const c
 
 	DBusError error = DBUS_ERROR_INIT;
 	DBusMessage *msg;
+	DBusMessage *rep = NULL;
+
 	if ((msg = dbus_message_new_method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
 					"org.freedesktop.DBus", "GetNameOwner")) == NULL) {
 		dbus_set_error(&error, DBUS_ERROR_NO_MEMORY, NULL);
@@ -49,7 +51,6 @@ static const char *bluealsa_client_get_unique_name(DBusConnection *conn, const c
 		goto fail;
 	}
 
-	DBusMessage *rep;
 	if ((rep = dbus_connection_send_with_reply_and_block(conn,
 					msg, DBUS_TIMEOUT_USE_DEFAULT, &error)) == NULL)
 		goto fail;
@@ -490,7 +491,8 @@ int bluealsa_client_get_device(bluealsa_client_t *client, struct bluealsa_client
 	if (dbus_bluez_get_device(client->dbus_ctx.conn, device->path, &dev, NULL) < 0)
 		return -1;
 
-	strncpy(device->alias, dev.name, sizeof(device->alias) - 1);
+	strncpy(device->alias, dev.name, sizeof(device->alias));
+	device->alias[sizeof(device->alias) - 1] = '\0';
 	ba2str(&dev.bt_addr, device->hex_addr);
 
 	return 0;

@@ -1,5 +1,5 @@
 /*
- * BlueALSA - autoconfig.c
+ * bluealsa-autoconfig - autoconfig.c
  * Copyright (c) 2023 @borine (https://github.com/borine/)
  *
  * This project is licensed under the terms of the MIT license.
@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "alsa.h"
 #include "bluealsa-client.h"
 #include "bluez-alsa/shared/log.h"
 #include "namehint.h"
@@ -50,24 +51,16 @@ static volatile bool running = true;
 static char *pattern = NULL;
 
 static void bluealsa_autoconfig_get_pattern(char **pattern) {
-	snd_config_t *top = NULL;
-	snd_config_update_t *update = NULL;
 	snd_config_t *node;
 	const char *config_pattern = NULL;
 
-	int ret = snd_config_update_r(&top, &update, NULL);
-	if (ret >= 0 && snd_config_search(top, "defaults.bluealsa.namehint", &node) >= 0)
+	if (snd_config_search(snd_config, "defaults.bluealsa.namehint", &node) >= 0)
 		snd_config_get_string(node, &config_pattern);
 
 	if (config_pattern == NULL)
 		config_pattern = BLUEALSA_AUTOCONFIG_CONFIG_TEMPLATE;
 
 	*pattern = strdup(config_pattern);
-
-	if (top)
-		snd_config_delete(top);
-	if (update)
-		snd_config_update_free(update);
 }
 
 static void bluealsa_autoconfig_udev_trigger(void) {
@@ -86,6 +79,11 @@ static void bluealsa_autoconfig_udev_trigger(void) {
 
 static int bluealsa_autoconfig_init_alsa(const char *progname) {
 	int fd;
+
+	snd_config_update();
+
+	/* Get the version of the **runtime** libasound2 */
+	alsa_version_init();
 
 	/* Ensure the required directories exist */
 	int ret = mkdir(BLUEALSA_AUTOCONFIG_CONFIG_DIR, 0775);
@@ -243,10 +241,6 @@ int main(int argc, char *argv[]) {
 	struct bluealsa_autoconfig config = {
 		.timeout = -1,
 	};
-	if (bluealsa_namehint_init(&config.hints) < 0) {
-		error("Out of memory");
-		return EXIT_FAILURE;
-	}
 
 	char **services = malloc(sizeof(char*));
 	services[0] = strdup(BLUEALSA_SERVICE);
@@ -307,6 +301,13 @@ int main(int argc, char *argv[]) {
 
 	if (bluealsa_autoconfig_init_alsa(argv[0]) < 0)
 		return EXIT_FAILURE;
+
+	debug("Runtime ALSA libasound version: %s", alsa_version_string());
+
+	if (bluealsa_namehint_init(&config.hints) < 0) {
+		error("Out of memory");
+		return EXIT_FAILURE;
+	}
 
 	if (bluealsa_autoconfig_init_client(&config) < 0)
 		return EXIT_FAILURE;

@@ -1,18 +1,19 @@
 /*
- * BlueALSA - namehint.c
+ * bluealsa-autoconfig - namehint.c
  * Copyright (c) 2023 @borine (https://github.com/borine/)
  *
  * This project is licensed under the terms of the MIT license.
  *
  */
 
-#include <alsa/version.h>
+#include <alsa/asoundlib.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include "alsa.h"
 #include "namehint.h"
 #include "bluealsa-client.h"
 
@@ -74,6 +75,12 @@ static const struct {
 	{ PROFILE_HSP,  "HSP",  "sco" }
 };
 
+static struct {
+	bool has_ctl_bat_arg;
+	bool has_ctl_btt_arg;
+	bool has_ctl_dyn_arg;
+	bool has_ctl_ext_arg;
+} bluealsa_config = { 0 };
 
 static struct bluealsa_namehint_device *bluealsa_namehint_device_get(struct bluealsa_namehint *hint, const char *path, struct bluealsa_client *client, const char *service) {
 	struct bluealsa_namehint_device *node = hint->devices, *prev = NULL;
@@ -96,9 +103,12 @@ static struct bluealsa_namehint_device *bluealsa_namehint_device_get(struct blue
 	if (bluealsa_client_get_device(client, &device) < 0)
 		goto fail;
 
-	strncpy(node->path, path, sizeof(node->path) - 1);
-	strncpy(node->hex_addr, device.hex_addr, sizeof(node->hex_addr) -1);
-	strncpy(node->service, service, sizeof(node->service) - 1);
+	strncpy(node->path, path, sizeof(node->path));
+	node->path[sizeof(node->path) - 1] = '\0';
+	strncpy(node->hex_addr, device.hex_addr, sizeof(node->hex_addr));
+	node->hex_addr[sizeof(node->hex_addr) - 1] = '\0';
+	strncpy(node->service, service, sizeof(node->service));
+	node->service[sizeof(node->service) - 1] = '\0';
 	node->alias = strdup(device.alias);
 	node->id = hint->next_id;
 
@@ -215,12 +225,43 @@ static bool bluealsa_namehint_hint_unref(struct bluealsa_namehint *hint, struct 
 	return false;
 }
 
+static void suppress_alsa_errors(const char *file, int line, const char *function, int err, const char *fmt, ...) {
+	return;
+}
+
+static bool bluealsa_has_ctl_arg(snd_config_t *root, snd_config_t *ctl, const char *arg_equals_value) {
+	int result;
+	snd_config_t *temp = NULL;
+
+	result = snd_config_expand(ctl, root, arg_equals_value, NULL, &temp);
+	if (temp != NULL)
+		snd_config_delete(temp);
+
+	return result >= 0;
+}
+
 /**
  * Allocate and initialize a new bluealsa_namehint structure.
  */
 int bluealsa_namehint_init(struct bluealsa_namehint **hint) {
 	*hint = calloc(sizeof(struct bluealsa_namehint), 1);
-	return *hint != NULL;
+	if (*hint == NULL)
+		return -1;
+
+	snd_config_t *ctl_node = NULL;
+	if (snd_config_search(snd_config, "ctl.bluealsa", &ctl_node) < 0)
+		return 0;
+
+	snd_lib_error_set_handler(suppress_alsa_errors);
+
+	bluealsa_config.has_ctl_bat_arg = bluealsa_has_ctl_arg(snd_config, ctl_node, "BAT=no");
+	bluealsa_config.has_ctl_btt_arg = bluealsa_has_ctl_arg(snd_config, ctl_node, "BTT=no");
+	bluealsa_config.has_ctl_dyn_arg = bluealsa_has_ctl_arg(snd_config, ctl_node, "DYN=no");
+	bluealsa_config.has_ctl_ext_arg = bluealsa_has_ctl_arg(snd_config, ctl_node, "EXT=no");
+
+	snd_lib_error_set_handler(NULL);
+
+	return 0;
 }
 
 /**
@@ -567,39 +608,52 @@ void bluealsa_namehint_print_default(struct bluealsa_namehint *hint, FILE *file)
 					defaults[PLAYBACK_SCO]->device->hex_addr,
 					defaults[PLAYBACK_SCO]->device->service);
 
-#if SND_LIB_VERSION >= 0x010205
-	/* ctl default requires features introduced in alsa-lib release 1.2.5 */
+	if (alsa_version_id() >= 0x010205) {
+		/* ctl default requires features introduced in alsa-lib release 1.2.5 */
 
-	if (defaults[PLAYBACK_A2DP] == NULL && defaults[PLAYBACK_SCO] == NULL)
-		return;
+		if (defaults[PLAYBACK_A2DP] == NULL && defaults[PLAYBACK_SCO] == NULL)
+			return;
 
-	const char *addr = NULL;
-	const char *service;
+		const char *addr = NULL;
+		const char *service;
 
-	if (defaults[PLAYBACK_A2DP] != NULL) {
-		addr = defaults[PLAYBACK_A2DP]->device->hex_addr;
-		service = defaults[PLAYBACK_A2DP]->device->service;
-	}
-
-	if (defaults[PLAYBACK_SCO] != NULL) {
-		if (defaults[PLAYBACK_A2DP] == NULL) {
-			addr = defaults[PLAYBACK_SCO]->device->hex_addr;
-			service = defaults[PLAYBACK_SCO]->device->service;
-		}
-		else if (strcmp(defaults[PLAYBACK_SCO]->device->service, defaults[PLAYBACK_A2DP]->device->service) == 0 && strcmp(defaults[PLAYBACK_SCO]->device->hex_addr, defaults[PLAYBACK_A2DP]->device->hex_addr) != 0) {
+		if (defaults[PLAYBACK_A2DP] != NULL) {
+			addr = defaults[PLAYBACK_A2DP]->device->hex_addr;
 			service = defaults[PLAYBACK_A2DP]->device->service;
-			addr = "FF:FF:FF:FF:FF:FF";
 		}
+
+		if (defaults[PLAYBACK_SCO] != NULL) {
+			if (defaults[PLAYBACK_A2DP] == NULL) {
+				addr = defaults[PLAYBACK_SCO]->device->hex_addr;
+				service = defaults[PLAYBACK_SCO]->device->service;
+			}
+			else if (strcmp(defaults[PLAYBACK_SCO]->device->service, defaults[PLAYBACK_A2DP]->device->service) == 0 && strcmp(defaults[PLAYBACK_SCO]->device->hex_addr, defaults[PLAYBACK_A2DP]->device->hex_addr) != 0) {
+				service = defaults[PLAYBACK_A2DP]->device->service;
+				addr = "FF:FF:FF:FF:FF:FF";
+			}
+		}
+
+		if (addr == NULL)
+			return;
+
+		/* alsa-lib "empty" ctl plugin fails if we create a reference here,
+		 * so we resort to an explicit config definition. */
+		fprintf(file, "ctl { type bluealsa device \"%s\" service \"%s\"", addr, service);
+
+		if (bluealsa_config.has_ctl_bat_arg)
+			fprintf(file, " battery { @func refer name defaults.bluealsa.ctl.battery }");
+
+		if (bluealsa_config.has_ctl_btt_arg)
+			fprintf(file, " bttransport { @func refer name defaults.bluealsa.ctl.bttransport }");
+
+		if (bluealsa_config.has_ctl_dyn_arg)
+			fprintf(file, " dynamic { @func refer name defaults.bluealsa.ctl.dynamic } }");
+
+		if (bluealsa_config.has_ctl_ext_arg)
+			fprintf(file, " extended { @func refer name defaults.bluealsa.ctl.extended }");
+
+		fprintf(file, "\n");
 	}
-
-	if (addr == NULL)
-		return;
-
-	/* alsa-lib "empty" ctl plugin fails if we create a reference here,
-	 * so we resort to an explicit config definition. */
-	fprintf(file, "ctl { type bluealsa device \"%s\" service \"%s\" battery { @func refer name defaults.bluealsa.ctl.battery } }\n", addr, service);
-
-#endif
 
 }
 

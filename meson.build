@@ -1,4 +1,4 @@
-project('bluealsa-autoconfig', 'c', version: '0.0.1', license: 'MIT')
+project('bluealsa-autoconfig', 'c', version: '0.1.0', license: 'MIT')
 
 prefix = get_option('prefix')
 assert(prefix.startswith('/'), 'Prefix is not absolute: "@0@"'.format(prefix))
@@ -28,10 +28,12 @@ compiler = meson.get_compiler('c')
 alsa_dep = dependency('alsa')
 bluez_dep = dependency('bluez')
 dbus_dep = dependency('dbus-1')
+gio_dep = dependency('gio-unix-2.0')
 
 subdir('bluez-alsa')
 
 autoconfig_sources = [
+	'alsa.c',
 	'autoconfig.c',
 	'bluealsa-client.c',
 	'namehint.c',
