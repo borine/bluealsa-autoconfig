@@ -57,8 +57,8 @@ struct bluealsa_client_callbacks {
 
 int bluealsa_client_open(bluealsa_client_t **client, struct bluealsa_client_callbacks *callbacks);
 int bluealsa_client_close(bluealsa_client_t *client);
-int bluealsa_client_get_services(bluealsa_client_t *client, const char **list, size_t *len);
 int bluealsa_client_get_pcms(bluealsa_client_t *client, const char *service);
+int bluealsa_client_num_services(const bluealsa_client_t *client);
 int bluealsa_client_get_device(bluealsa_client_t *client, struct bluealsa_client_device *device);
 int bluealsa_client_watch_service(bluealsa_client_t *client, const char *service);
 int bluealsa_client_poll_fds(bluealsa_client_t *client, struct pollfd *fds, nfds_t *nfds);

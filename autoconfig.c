@@ -198,7 +198,7 @@ static int bluealsa_autoconfig_commit_changes(struct bluealsa_autoconfig *config
 		return -1;
 	}
 
-	bluealsa_namehint_print(config->hints, file, pattern);
+	bluealsa_namehint_print(config->hints, file, pattern, bluealsa_client_num_services(config->client) > 1);
 
 	fclose(file);
 

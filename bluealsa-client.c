@@ -431,6 +431,10 @@ int bluealsa_client_get_pcms(bluealsa_client_t *client, const char *service) {
 	return 0;
 }
 
+int bluealsa_client_num_services(const bluealsa_client_t *client) {
+	return client->services_count;
+}
+
 int bluealsa_client_poll_fds(bluealsa_client_t *client, struct pollfd *fds, nfds_t *nfds) {
 	if (!bluealsa_dbus_connection_poll_fds(&client->dbus_ctx, fds, nfds))
 		return -1;

@@ -500,7 +500,7 @@ static int bluealsa_namehint_hint_expand_description(const struct bluealsa_nameh
  * @param file the file.
  * @param pattern template to be used for hint descriptions.
  */
-int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, const char *pattern) {
+int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, const char *pattern, bool with_service) {
 	struct bluealsa_namehint_hint *h = hint->hints;
 	struct bluealsa_namehint_device *d = hint->devices;
 	while (h != NULL) {
@@ -509,7 +509,7 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 		if (ret < 0)
 			return ret;
 
-		fprintf(file, "namehint.pcm._bluealsa%u \"bluealsa:DEV=%s,PROFILE=%s,SRV=%s"
+		fprintf(file, "namehint.pcm._bluealsa%u \"bluealsa:DEV=%s,PROFILE=%s%s%s"
 #if SND_LIB_VERSION >= 0x010203
 				"|%s"
 #else
@@ -519,7 +519,8 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 			h->id,
 			h->device->hex_addr,
 			profiles[h->profile].type,
-			h->device->service,
+			with_service ? ",SRV=" : "",
+			with_service ? h->device->service : "",
 			description,
 			h->stream == BA_PCM_MODE_SOURCE ? "|IOIDInput" :
 				h->stream == BA_PCM_MODE_SINK ? "|IOIDOutput" : "");

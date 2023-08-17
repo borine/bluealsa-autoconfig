@@ -29,7 +29,7 @@ bool bluealsa_namehint_pcm_update(struct bluealsa_namehint *hint, const char *pa
 
 void bluealsa_namehint_reset(struct bluealsa_namehint *hint);
 
-int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, const char *pattern);
+int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, const char *pattern, bool with_service);
 
 void bluealsa_namehint_print_default(struct bluealsa_namehint *hint, FILE *file);
 
