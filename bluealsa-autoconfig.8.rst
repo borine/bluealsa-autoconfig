@@ -113,6 +113,33 @@ change takes effect. The key should be defined in a system-wide configuration
 file, it will not be read from a user's ``~/.asoundrc`` file. It is recommended
 to use ``/etc/asound.conf`` for this purpose.
 
+BLUETOOTH DEFAULT
+=================
+
+BlueALSA defines a default Bluetooth PCM, using the address
+`00:00:00:00:00:00`, which selects the most recently connected device.
+`bluealsa-autoconfig` creates a namehint for this PCM whenever at least one
+Bluetooth audio device is connected. The name used is "bluealsa" and the
+description is simply "Bluetooth Audio". For example:
+::
+
+    $ aplay -L
+    bluealsa
+        Bluetooth Audio
+
+This namehint can be disabled for
+any user by adding this definition to the ``~/.asoundrc`` file:
+::
+
+    bluealsa.pcm.hint.show off
+
+The text used in the namehint is taken from the BlueALSA configuration which
+can be changed for each user by adding this definition to ``~/.asoundrc``:
+::
+
+    pcm.bluealsa.hint.description "My new bluealsa description"
+
+
 AUTOMATIC DEFAULT
 =================
 
