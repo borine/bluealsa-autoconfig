@@ -648,12 +648,12 @@ void bluealsa_namehint_print_default(struct bluealsa_namehint *hint, FILE *file)
 			fprintf(file, " bttransport { @func refer name defaults.bluealsa.ctl.bttransport }");
 
 		if (bluealsa_config.has_ctl_dyn_arg)
-			fprintf(file, " dynamic { @func refer name defaults.bluealsa.ctl.dynamic } }");
+			fprintf(file, " dynamic { @func refer name defaults.bluealsa.ctl.dynamic }");
 
 		if (bluealsa_config.has_ctl_ext_arg)
 			fprintf(file, " extended { @func refer name defaults.bluealsa.ctl.extended }");
 
-		fprintf(file, "\n");
+		fprintf(file, "}\n");
 	}
 
 }
