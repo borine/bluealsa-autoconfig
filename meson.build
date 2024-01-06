@@ -20,7 +20,7 @@ conf_data.set('bindir', bindir)
 
 version_conf = configuration_data()
 version_conf.set_quoted('PACKAGE_VERSION', meson.project_version())
-configure_file(output: 'version.h', configuration: version_conf)
+version_h = configure_file(output: 'version.h', configuration: version_conf)
 
 compiler = meson.get_compiler('c')
 
@@ -33,6 +33,7 @@ gio_dep = dependency('gio-unix-2.0')
 subdir('bluez-alsa')
 
 autoconfig_sources = [
+	version_h,
 	'alsa.c',
 	'autoconfig.c',
 	'bluealsa-client.c',
@@ -84,15 +85,20 @@ if systemd.found()
 endif
 
 if get_option('doc')
-  custom_target(
-    'documentation',
-    output: 'bluealsa-autoconfig.8',
-    input: 'bluealsa-autoconfig.8.rst',
-	command: ['rst2man', '@INPUT@', '@OUTPUT@'],
-    build_by_default: true,
-    install: true,
-    install_dir: join_paths(mandir, 'man8'),
-  )
+    manual_source = configure_file(
+        input: 'bluealsa-autoconfig.8.rst.in',
+        output: 'bluealsa-autoconfig.8.rst',
+        configuration: configuration_data({'VERSION' : meson.project_name() + ' ' + meson.project_version()})
+    )
+    custom_target(
+        'documentation',
+        output: 'bluealsa-autoconfig.8',
+	    input: manual_source,
+	    command: ['rst2man', '@INPUT@', '@OUTPUT@'],
+        build_by_default: true,
+        install: true,
+        install_dir: join_paths(mandir, 'man8'),
+    )
 endif
 
 if bashcompletion.found()

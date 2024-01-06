@@ -9,7 +9,7 @@ Bluetooth Audio ALSA Configuration Manager
 :Date: March 2023
 :Manual section: 8
 :Manual group: System Manager's Manual
-:Version: $VERSION$
+:Version: @VERSION@
 
 SYNOPSIS
 ========
