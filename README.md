@@ -5,12 +5,14 @@
 `bluealsa-autoconfig` is a simple program to add and remove ALSA configuration
 nodes for BlueALSA Bluetooth PCM and CTL devices. It can also optionally
 simulate `udev` events on Bluetooth audio device connect and disconnect.
+See [The bluez-alsa project](https://github.com/arkq/bluez-alsa) for more
+information on BlueALSA.
 
 ALSA has built-in functions to add and remove PCM configuration nodes when
 sound cards are added or removed. However, it provides no equivalent
 functionality for software PCM types such as BlueALSA. This is unfortunate
 because Bluetooth audio devices are more likely to be disconnected during a
-session, so dynamic management the ALSA configuration is even more important
+session, so dynamic management of the ALSA configuration is even more important
 for Bluetooth than it is for sound cards.
 
 `bluealsa-autoconfig` aims to rectify that situation by updating the ALSA
@@ -43,7 +45,7 @@ surround71:CARD=PCH,DEV=0
     HDA Intel PCH, ALC236 Analog
     7.1 Surround output to Front, Center, Side, Rear and Woofer speakers
 ```
-And then when a Bluetooth is connected:
+And then when a Bluetooth device is connected:
 ```
 $ aplay -L
 default
@@ -102,9 +104,10 @@ and `/etc/asound.conf` contains:
 defaults.bluealsa.namehint "%n %p (%c) Bluetooth %s"
 ```
 
-The program must be run as root to gain the necessary privileges for modifying
-the global ALSA configuration and triggering udev events. See the
-[manual page](./bluealsa-autoconfig.8.rst) for full details.
+`bluealsa-autoconfig` must be run as root to gain the necessary privileges
+for modifying the global ALSA configuration and triggering udev events. See
+the [manual page](./bluealsa-autoconfig.8.rst.in) for full details.
+
 A systemd service unit file is included.
 
 ## Installation
@@ -129,4 +132,4 @@ meson configure -Ddoc=true builddir
 
 This project is licensed under the terms of the MIT license.
 
-It includes copies of source code files from the bluez-alsa project, which are also licensed under the MIT license and all rights to those files remain with the original author.
+It includes copies of source code files from the bluez-alsa project, which are also licensed under the MIT license and all rights to those files remain with their original author.
