@@ -49,6 +49,7 @@ static bool udev_events = false;
 static bool defaults = false;
 static volatile bool running = true;
 static char *pattern = NULL;
+static char *script = NULL;
 
 static void bluealsa_autoconfig_get_pattern(char **pattern) {
 	snd_config_t *node;
@@ -144,16 +145,35 @@ static void bluealsa_autoconfig_clear_timeout(struct bluealsa_autoconfig *config
 	config->timeout = -1;
 }
 
+static void bluealsa_autoconfig_run_script(const char *event, const char *path) {
+	if (script) {
+		pid_t pid = fork();
+		if (pid < 0) {
+			fprintf(stderr, "Failed to fork process for %s\n", script);
+			return;
+		} else if (pid == 0) {
+			char* argv[] = {script, event, path, NULL};
+			execv(script, argv);
+			fprintf(stderr, "Failed to execute %s\n", script);
+			exit(1);
+		} else {
+			signal(SIGCHLD,SIG_IGN);
+		}
+	}
+}
+
 static void bluealsa_autoconfig_pcm_added(const struct ba_pcm *pcm, const char *service, void *data) {
 	struct bluealsa_autoconfig *config = data;
 	if (bluealsa_namehint_pcm_add(config->hints, pcm, config->client, service))
 		bluealsa_autoconfig_set_timeout(config);
+	bluealsa_autoconfig_run_script("add", pcm->pcm_path);
 }
 
 static void bluealsa_autoconfig_pcm_removed(const char *path, void *data) {
 	struct bluealsa_autoconfig *config = data;
 	if (bluealsa_namehint_pcm_remove(config->hints, path))
 		bluealsa_autoconfig_set_timeout(config);
+	bluealsa_autoconfig_run_script("remove", path);
 }
 
 static void bluealsa_autoconfig_pcm_updated(const char *path, const char *service, struct bluealsa_pcm_properties *props, void *data) {
@@ -164,6 +184,7 @@ static void bluealsa_autoconfig_pcm_updated(const char *path, const char *servic
 
 	if (bluealsa_namehint_pcm_update(config->hints, path, props->codec))
 		bluealsa_autoconfig_set_timeout(config);
+	bluealsa_autoconfig_run_script("update", path);
 }
 
 static void bluealsa_autoconfig_service_stopped(const char *service, void *data) {
@@ -247,11 +268,12 @@ int main(int argc, char *argv[]) {
 	unsigned int services_count = 1;
 
 	int opt;
-	const char *opts = "hVlB:du";
+	const char *opts = "hVlB:S:du";
 	const struct option longopts[] = {
 		{ "help", no_argument, NULL, 'h' },
 		{ "version", no_argument, NULL, 'V' },
 		{ "dbus", required_argument, NULL, 'B'},
+		{ "script", required_argument, NULL, 'S'},
 		{ "default", no_argument, NULL, 'd' },
 		{ "udev", no_argument, NULL, 'u' },
 		{ 0, 0, 0, 0 },
@@ -280,6 +302,11 @@ int main(int argc, char *argv[]) {
 			snprintf(service, sizeof(service), BLUEALSA_SERVICE ".%s", optarg);
 			services = realloc(services, (services_count + 1) * sizeof(char*));
 			services[services_count++] = strdup(service);
+			break;
+		}
+
+		case 'S' /* --script=PROG */ : {
+			script = strdup(optarg);
 			break;
 		}
 
