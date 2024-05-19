@@ -8,7 +8,7 @@
 
 #include "bluealsa-client.h"
 #include "bluez-alsa/dbus.h"
-#include "bluez-alsa/shared/dbus-client.h"
+#include "bluez-alsa/shared/dbus-client-pcm.h"
 #include "bluez-alsa/shared/log.h"
 
 #include <bluetooth/bluetooth.h>
@@ -170,7 +170,7 @@ static DBusHandlerResult bluealsa_client_objmgr_signal_handler(struct bluealsa_c
 			if (strcmp(iface, BLUEALSA_INTERFACE_PCM) == 0) {
 				struct ba_pcm pcm;
 				DBusError err = DBUS_ERROR_INIT;
-				if (!bluealsa_dbus_message_iter_get_pcm(iter, &err, &pcm)) {
+				if (!dbus_message_iter_get_ba_pcm(iter, &err, &pcm)) {
 					error("Couldn't read PCM properties: %s", err.message);
 					dbus_error_free(&err);
 					return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -376,7 +376,7 @@ int bluealsa_client_open(bluealsa_client_t **client, struct bluealsa_client_call
 
 	DBusError err = DBUS_ERROR_INIT;
 	dbus_threads_init_default();
-	if (!bluealsa_dbus_connection_ctx_init(&new_client->dbus_ctx, "", &err)) {
+	if (!ba_dbus_connection_ctx_init(&new_client->dbus_ctx, "", &err)) {
 		free(new_client);
 		error("Couldn't initialize D-Bus context: %s", err.message);
 		ret = EIO;
@@ -401,13 +401,13 @@ int bluealsa_client_open(bluealsa_client_t **client, struct bluealsa_client_call
 	return 0;
 
 fail:
-	bluealsa_dbus_connection_ctx_free(&new_client->dbus_ctx);
+	ba_dbus_connection_ctx_free(&new_client->dbus_ctx);
 	free(new_client);
 	return -ret;
 }
 
 int bluealsa_client_close(bluealsa_client_t *client) {
-	bluealsa_dbus_connection_ctx_free(&client->dbus_ctx);
+	ba_dbus_connection_ctx_free(&client->dbus_ctx);
 	free(client->services);
 	free(client);
 	return 0;
@@ -421,7 +421,7 @@ int bluealsa_client_get_pcms(bluealsa_client_t *client, const char *service) {
 	struct ba_pcm *pcms = NULL;
 	size_t count = 0;
 	strcpy(client->dbus_ctx.ba_service, service);
-	if (!bluealsa_dbus_get_pcms(&client->dbus_ctx, &pcms, &count, &error))
+	if (!ba_dbus_pcm_get_all(&client->dbus_ctx, &pcms, &count, &error))
 		return -ENOENT;
 
 	size_t i;
@@ -436,13 +436,13 @@ int bluealsa_client_num_services(const bluealsa_client_t *client) {
 }
 
 int bluealsa_client_poll_fds(bluealsa_client_t *client, struct pollfd *fds, nfds_t *nfds) {
-	if (!bluealsa_dbus_connection_poll_fds(&client->dbus_ctx, fds, nfds))
+	if (!ba_dbus_connection_poll_fds(&client->dbus_ctx, fds, nfds))
 		return -1;
 	return 0;
 }
 
 int bluealsa_client_poll_dispatch(bluealsa_client_t *client, struct pollfd *pfds, nfds_t nfds) {
-	if (bluealsa_dbus_connection_poll_dispatch(&client->dbus_ctx, pfds, nfds))
+	if (ba_dbus_connection_poll_dispatch(&client->dbus_ctx, pfds, nfds))
 		while (dbus_connection_dispatch(client->dbus_ctx.conn) == DBUS_DISPATCH_DATA_REMAINS)
 			continue;
 	return 0;
@@ -463,28 +463,28 @@ int bluealsa_client_watch_service(bluealsa_client_t *client, const char *service
 		strncpy(new_service->unique_name, unique_name, sizeof(new_service->unique_name) - 1);
 
 	if (client->add_func)
-			bluealsa_dbus_connection_signal_match_add(&client->dbus_ctx,
+			ba_dbus_connection_signal_match_add(&client->dbus_ctx,
 				service, NULL, DBUS_INTERFACE_OBJECT_MANAGER,
 				"InterfacesAdded", "path_namespace='/org/bluealsa'");
 	if (client->remove_func)
-		bluealsa_dbus_connection_signal_match_add(&client->dbus_ctx,
+		ba_dbus_connection_signal_match_add(&client->dbus_ctx,
 				service, NULL, DBUS_INTERFACE_OBJECT_MANAGER,
 				"InterfacesRemoved", "path_namespace='/org/bluealsa'");
 
 	if (client->update_func)
-		bluealsa_dbus_connection_signal_match_add(&client->dbus_ctx,
+		ba_dbus_connection_signal_match_add(&client->dbus_ctx,
 				service, NULL, DBUS_INTERFACE_PROPERTIES,
 				"PropertiesChanged", "path_namespace='/org/bluealsa'");
 
 	char dbus_args[50];
 	/* service stopped */
 	snprintf(dbus_args, sizeof(dbus_args), "arg0='%s',arg2=''", service);
-	bluealsa_dbus_connection_signal_match_add(&client->dbus_ctx,
+	ba_dbus_connection_signal_match_add(&client->dbus_ctx,
 			DBUS_SERVICE_DBUS, NULL, DBUS_INTERFACE_DBUS,
 			"NameOwnerChanged", dbus_args);
 	/* service started */
 	snprintf(dbus_args, sizeof(dbus_args), "arg0='%s',arg1=''", service);
-	bluealsa_dbus_connection_signal_match_add(&client->dbus_ctx,
+	ba_dbus_connection_signal_match_add(&client->dbus_ctx,
 			DBUS_SERVICE_DBUS, NULL, DBUS_INTERFACE_DBUS,
 			"NameOwnerChanged", dbus_args);
 	return 0;

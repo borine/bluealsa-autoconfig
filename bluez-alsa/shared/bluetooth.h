@@ -1,6 +1,6 @@
 /*
  * BlueALSA - bluetooth.h
- * Copyright (c) 2016-2023 Arkadiusz Bokowy
+ * Copyright (c) 2016-2024 Arkadiusz Bokowy
  *
  * This file is a part of bluez-alsa.
  *
@@ -27,6 +27,7 @@
 #define BT_COMPID_SONY               0x012D
 #define BT_COMPID_CYPRESS            0x0131
 #define BT_COMPID_SAVITECH           0x053A
+#define BT_COMPID_LINUX_FOUNDATION   0x05F1
 #define BT_COMPID_FRAUNHOFER_IIS     0x08A9
 
 /**
@@ -38,5 +39,9 @@
 #define BT_UUID_HSP_AG      "00001112-0000-1000-8000-00805F9B34FB"
 #define BT_UUID_HFP_HF      "0000111E-0000-1000-8000-00805F9B34FB"
 #define BT_UUID_HFP_AG      "0000111F-0000-1000-8000-00805F9B34FB"
+
+#define BT_UUID_MIDI        "03B80E5A-EDE8-4B33-A751-6CE34EC4C700"
+#define BT_UUID_MIDI_CHAR   "7772E5DB-3868-4112-A1A9-F2669D106BF3"
+#define BT_UUID_MIDI_DESC   "00002901-0000-1000-8000-00805F9B34FB"
 
 #endif

@@ -2,6 +2,7 @@ bluez_alsa_sources = [
 	'dbus.c',
 	'shared/a2dp-codecs.c',
 	'shared/dbus-client.c',
+	'shared/dbus-client-pcm.c',
 	'shared/log.c',
 	'shared/rt.c',
 ]

@@ -12,7 +12,7 @@
 #include <poll.h>
 #include <stdbool.h>
 #include "bluez-alsa/dbus.h"
-#include "bluez-alsa/shared/dbus-client.h"
+#include "bluez-alsa/shared/dbus-client-pcm.h"
 
 typedef struct bluealsa_client bluealsa_client_t;
 
