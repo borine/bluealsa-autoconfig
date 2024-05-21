@@ -1,0 +1,11 @@
+[Unit]
+Description=BlueALSA Agent service
+Documentation=man:bluealsa-agent(8)
+After=dbus.service
+
+[Service]
+Type=simple
+ExecStart=@bindir@/bluealsa-agent
+
+[Install]
+WantedBy=default.target

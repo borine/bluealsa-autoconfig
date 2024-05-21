@@ -10,4 +10,17 @@ _bluealsa_autoconfig() {
 	[[ $COMPREPLY == *= ]] && compopt -o nospace
 }
 
+# completion function for bluealsa-agent
+_bluealsa_agent() {
+	local cur prev words cword split
+	_init_completion -s || return
+	if [[ "$prev" = "--dbus" ]] ; then
+		COMPREPLY=()
+		return
+	fi
+	COMPREPLY=( $(compgen -W "$(_parse_help $1)" -- $cur) )
+	[[ $COMPREPLY == *= ]] && compopt -o nospace
+}
+
 complete -F _bluealsa_autoconfig bluealsa-autoconfig
+complete -F _bluealsa_agent bluealsa-agent

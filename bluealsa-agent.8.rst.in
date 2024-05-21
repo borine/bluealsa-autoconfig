@@ -1,0 +1,146 @@
+===================
+bluealsa-agent
+===================
+
+-------------------------------------
+BlueALSA event handler helper utility
+-------------------------------------
+
+:Date: May 2024
+:Manual section: 8
+:Manual group: System Manager's Manual
+:Version: @VERSION@
+
+SYNOPSIS
+========
+
+**bluealsa-agent** [*OPTION*] ... *COMMAND*
+
+DESCRIPTION
+===========
+
+**bluealsa-agent** is a simple daemon to invoke arbitrary commands in response
+to BlueALSA PCM events.
+
+OPTIONS
+=======
+
+-h, --help
+    Output a usage message and exit.
+
+-V, --version
+    Output the version number and exit.
+
+-B NAME, --dbus=NAME
+    BlueALSA service name suffix. This option can be given more than once to
+    add support for multiple ``bluealsa(8)`` service instances. The default
+    service **org.bluealsa** is always included. For example, the following
+    will respond to events from **org.bluealsa**, **org.bluealsa.sink** and
+    **org.bluealsa.source**:
+    ::
+
+        bluealsa-agent -B sink -B source <PATH-TO-COMMAND>
+
+    For more information see the ``--dbus`` option of the ``bluealsa(8)``
+    service daemon.
+
+-s, --status
+	Invoke the *COMMAND* also when the PCM "Running" or "$oftvol" status
+	changes. See COMMAND_ below.
+
+COMMAND
+=======
+
+The COMMAND must be a full path, either to an executable file or to a directory
+containing only executable files. The specified file(s) will be executed
+whenever one of the following events is signalled by the BlueALSA D-Bus
+service(s).
+
+	* PCM added
+	* PCM removed
+	* PCM codec changed
+
+and optionally if *--status* is used:
+
+	* PCM status changed
+
+If COMMAND is a directory then each file within the directory is executed, in
+alphanumeric order, and **bluealsa-agent** waits for each file to complete
+before starting the next; only one event at a time will be processed. If
+COMMAND is a file then **bluealsa-agent** does not wait for it to complete;
+so it is possible that it may be invoked again by the next event before the
+previous invocation has completed. In either case each executable file is
+invoked by **bluealsa-agent** with two arguments as:
+
+    COMMAND *EVENT* *PCM-PATH*
+
+where *EVENT* is one of ``add``, ``remove`` or ``update`` and *PCM-PATH* is the
+D-Bus object path of the PCM associated with the event.
+
+**bluealsa-agent** also sets environment variables to pass additional
+information about the event to *COMMAND*. For the "add" event:
+
+  ``BLUEALSA_PCM_PROPERTY_ADDRESS``
+    The Bluetooth address of the device as `XX:XX:XX:XX:XX:XX`
+
+  ``BLUEALSA_PCM_PROPERTY_NAME``
+    The ``alias`` of the device, for example ``"Jabra MOVE v2.3.0"``
+
+  ``BLUEALSA_PCM_PROPERTY_PROFILE``
+    The Bluetooth profile, for example ``A2DP`` or ``HFP``
+
+  ``BLUEALSA_PCM_PROPERTY_MODE``
+    The stream direction, either ``sink`` or ``source``
+
+  ``BLUEALSA_PCM_PROPERTY_CODEC``
+    The used codec, for example ``SBC``, ``AAC``, or ``mSBC``. Note that for the
+    ``HFP`` profile the codec may be unset when the PCM is added, but will be
+    reported in an ``update`` event as soon as the codec is set.
+
+  ``BLUEALSA_PCM_PROPERTY_FORMAT``
+    The audio sample format. For most codecs used by Bluetooth PCMs this is
+    ``S16_LE``.
+
+  ``BLUEALSA_PCM_PROPERTY_CHANNELS``
+    The number of audio channels, for example ``2`` for stereo, ``1`` for mono.
+
+  ``BLUEALSA_PCM_PROPERTY_SAMPLING``
+    The audio sample rate in frames per second, for example ``48000`` or
+    ``16000``.
+
+  ``BLUEALSA_PCM_PROPERTY_TRANSPORT``
+    The Bluetooth transport type, for example ``A2DP_source`` or ``HFP_AG``.
+
+  ``BLUEALSA_PCM_PROPERTY_SERVICE``
+    The D-Bus well-known name of the BlueALSA service handling this PCM, for
+    example ``org.bluealsa``.
+	
+For the "update" event:
+
+  ``BLUEALSA_PCM_PROPERTY_CODEC``
+
+  ``BLUEALSA_PCM_PROPERTY_FORMAT``
+
+  ``BLUEALSA_PCM_PROPERTY_CHANNELS``
+
+  ``BLUEALSA_PCM_PROPERTY_SAMPLING``
+
+When *--status* is used, then two addtional environment variables are also
+set:
+ 
+  ``BLUEALSA_PCM_PROPERTY_RUNNING``
+    ``true`` if the PCM is running (i.e. when the underlying Bluetooth transport
+    is acquired and able to transfer audio samples), ``false`` otherwise.
+
+  ``BLUEALSA_PCM_PROPERTY_SOFTVOL``
+    ``true`` when the BlueALSA "SoftVolume" property is enabled for this PCM.
+    See ``bluealsa(8)`` for more information.
+
+SEE ALSO
+========
+
+``bluealsa(8)``
+
+Project web site
+  https://github.com/borine/bluealsa-autoconfig
+

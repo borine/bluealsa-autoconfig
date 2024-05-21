@@ -49,6 +49,21 @@ autoconfig = build_target(
 	install_dir: bindir,
 )
 
+agent_sources = [
+	version_h,
+	'agent.c',
+	'bluealsa-client.c',
+]
+
+agent = build_target(
+	'bluealsa-agent',
+	agent_sources,
+	target_type: 'executable',
+	dependencies: bluez_alsa_dep,
+	install: true,
+	install_dir: bindir,
+)
+
 alsa_plugin_dir = join_paths(
 	alsa_dep.get_pkgconfig_variable('libdir'),
 	'alsa-lib'
@@ -74,26 +89,48 @@ install_data(
 )
 
 if systemd.found()
-	unitdir = join_paths(prefix, 'lib', 'systemd', 'system')
+	sysunitdir = join_paths(prefix, 'lib', 'systemd', 'system')
 	configure_file(
 		input : 'bluealsa-autoconfig.service.in',
 		output : 'bluealsa-autoconfig.service',
 		configuration : conf_data,
 		install: true,
-		install_dir: unitdir
+		install_dir: sysunitdir
+	)
+	userunitdir = join_paths(prefix, 'lib', 'systemd', 'user')
+	configure_file(
+		input : 'bluealsa-agent.service.in',
+		output : 'bluealsa-agent.service',
+		configuration : conf_data,
+		install: true,
+		install_dir: userunitdir
 	)
 endif
 
 if get_option('doc')
-    manual_source = configure_file(
+    autoconf_manual_source = configure_file(
         input: 'bluealsa-autoconfig.8.rst.in',
         output: 'bluealsa-autoconfig.8.rst',
         configuration: configuration_data({'VERSION' : meson.project_name() + ' ' + meson.project_version()})
     )
     custom_target(
-        'documentation',
+        'autoconfig_documentation',
         output: 'bluealsa-autoconfig.8',
-	    input: manual_source,
+	    input: autoconf_manual_source,
+	    command: ['rst2man', '@INPUT@', '@OUTPUT@'],
+        build_by_default: true,
+        install: true,
+        install_dir: join_paths(mandir, 'man8'),
+    )
+    agent_manual_source = configure_file(
+        input: 'bluealsa-agent.8.rst.in',
+        output: 'bluealsa-agent.8.rst',
+        configuration: configuration_data({'VERSION' : meson.project_name() + ' ' + meson.project_version()})
+    )
+    custom_target(
+        'agent_documentation',
+        output: 'bluealsa-agent.8',
+	    input: agent_manual_source,
 	    command: ['rst2man', '@INPUT@', '@OUTPUT@'],
         build_by_default: true,
         install: true,
