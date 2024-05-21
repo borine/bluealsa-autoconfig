@@ -40,17 +40,17 @@
 #define BLUEALSA_AUTOCONFIG_LOCK_FILE  BLUEALSA_AUTOCONFIG_RUN_DIR "/lock"
 
 struct bluealsa_autoconfig {
-	bluealsa_client_t *client;
+	bluealsa_client_t client;
 	struct bluealsa_namehint *hints;
 	int timeout;
+	char *pattern;
 };
 
 static bool udev_events = false;
 static bool defaults = false;
 static volatile bool running = true;
-static char *pattern = NULL;
 
-static void bluealsa_autoconfig_get_pattern(char **pattern) {
+static void bluealsa_autoconfig_get_pattern(struct bluealsa_autoconfig *config) {
 	snd_config_t *node;
 	const char *config_pattern = NULL;
 
@@ -60,7 +60,7 @@ static void bluealsa_autoconfig_get_pattern(char **pattern) {
 	if (config_pattern == NULL)
 		config_pattern = BLUEALSA_AUTOCONFIG_CONFIG_TEMPLATE;
 
-	*pattern = strdup(config_pattern);
+	config->pattern = strdup(config_pattern);
 }
 
 static void bluealsa_autoconfig_udev_trigger(void) {
@@ -198,7 +198,7 @@ static int bluealsa_autoconfig_commit_changes(struct bluealsa_autoconfig *config
 		return -1;
 	}
 
-	bluealsa_namehint_print(config->hints, file, pattern, bluealsa_client_num_services(config->client) > 1);
+	bluealsa_namehint_print(config->hints, file, config->pattern, bluealsa_client_num_services(config->client) > 1);
 
 	fclose(file);
 
@@ -228,7 +228,7 @@ static void bluealsa_autoconfig_cleanup(struct bluealsa_autoconfig *config) {
 	bluealsa_namehint_free(config->hints);
 	if (config->client != NULL)
 		bluealsa_client_close(config->client);
-	free(pattern);
+	free(config->pattern);
 	unlink(BLUEALSA_AUTOCONFIG_LOCK_FILE);
 }
 
@@ -312,7 +312,7 @@ int main(int argc, char *argv[]) {
 	if (bluealsa_autoconfig_init_client(&config) < 0)
 		return EXIT_FAILURE;
 
-	bluealsa_autoconfig_get_pattern(&pattern);
+	bluealsa_autoconfig_get_pattern(&config);
 
 	unsigned int index;
 	for (index = 0; index < services_count; index++) {

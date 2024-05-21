@@ -14,7 +14,7 @@
 #include "bluez-alsa/dbus.h"
 #include "bluez-alsa/shared/dbus-client-pcm.h"
 
-typedef struct bluealsa_client bluealsa_client_t;
+typedef struct bluealsa_client *bluealsa_client_t;
 
 struct bluealsa_client_device {
 	const char *path;
@@ -55,14 +55,18 @@ struct bluealsa_client_callbacks {
 	void *data;
 };
 
-int bluealsa_client_open(bluealsa_client_t **client, struct bluealsa_client_callbacks *callbacks);
-int bluealsa_client_close(bluealsa_client_t *client);
-int bluealsa_client_get_pcms(bluealsa_client_t *client, const char *service);
-int bluealsa_client_num_services(const bluealsa_client_t *client);
-int bluealsa_client_get_device(bluealsa_client_t *client, struct bluealsa_client_device *device);
-int bluealsa_client_watch_service(bluealsa_client_t *client, const char *service);
-int bluealsa_client_poll_fds(bluealsa_client_t *client, struct pollfd *fds, nfds_t *nfds);
-int bluealsa_client_poll_dispatch(bluealsa_client_t *client, struct pollfd *fds, nfds_t nfds);
+int bluealsa_client_open(bluealsa_client_t *client, struct bluealsa_client_callbacks *callbacks);
+int bluealsa_client_close(bluealsa_client_t client);
+int bluealsa_client_get_pcms(bluealsa_client_t client, const char *service);
+int bluealsa_client_num_services(const bluealsa_client_t client);
+int bluealsa_client_get_device(bluealsa_client_t client, struct bluealsa_client_device *device);
+int bluealsa_client_watch_service(bluealsa_client_t client, const char *service);
+int bluealsa_client_poll_fds(bluealsa_client_t client, struct pollfd *fds, nfds_t *nfds);
+int bluealsa_client_poll_dispatch(bluealsa_client_t client, struct pollfd *fds, nfds_t nfds);
 
+const char *bluealsa_client_transport_to_string(int transport_code);
+const char *bluealsa_client_transport_to_profile(int transport_code);
+const char *bluealsa_client_mode_to_string(int pcm_mode);
+const char *bluealsa_client_format_to_string(int pcm_format);
 
 #endif

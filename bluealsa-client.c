@@ -81,9 +81,8 @@ fail:
 	return NULL;
 }
 
-static void	bluealsa_client_service_started(bluealsa_client_t *client, const char *well_known_name, const char *unique_name) {
-	unsigned int index;
-	for (index = 0; index < client->services_count; index++) {
+static void	bluealsa_client_service_started(bluealsa_client_t client, const char *well_known_name, const char *unique_name) {
+	for (unsigned int index = 0; index < client->services_count; index++) {
 		struct bluealsa_client_service *service = &client->services[index];
 		if (strcmp(service->well_known_name, well_known_name) == 0) {
 			strncpy(service->unique_name, unique_name, sizeof(service->unique_name) - 1);
@@ -92,9 +91,10 @@ static void	bluealsa_client_service_started(bluealsa_client_t *client, const cha
 	}
 }
 
-static void	bluealsa_client_service_stopped(bluealsa_client_t *client, const char *well_known_name) {
-	unsigned int index;
-	for (index = 0; index < client->services_count; index++) {
+static void	bluealsa_client_service_stopped(bluealsa_client_t client, const char *well_known_name) {
+	if (client->stopped_func == NULL)
+		return;
+	for (unsigned int index = 0; index < client->services_count; index++) {
 		struct bluealsa_client_service *service = &client->services[index];
 		if (strcmp(service->well_known_name, well_known_name) == 0) {
 			service->unique_name[0] = '\0';
@@ -104,9 +104,10 @@ static void	bluealsa_client_service_stopped(bluealsa_client_t *client, const cha
 	}
 }
 
-static void	bluealsa_client_pcm_added(bluealsa_client_t *client, struct ba_pcm *pcm, const char *unique_name) {
-	unsigned int index;
-	for (index = 0; index < client->services_count; index++) {
+static void	bluealsa_client_pcm_added(bluealsa_client_t client, struct ba_pcm *pcm, const char *unique_name) {
+	if (client->add_func == NULL)
+		return;
+	for (unsigned int index = 0; index < client->services_count; index++) {
 		struct bluealsa_client_service *service = &client->services[index];
 		if (strcmp(service->unique_name, unique_name) == 0) {
 			client->add_func(pcm, service->well_known_name, client->user_data);
@@ -115,9 +116,10 @@ static void	bluealsa_client_pcm_added(bluealsa_client_t *client, struct ba_pcm *
 	}
 }
 
-static void	bluealsa_client_pcm_removed(bluealsa_client_t *client, const char *path, const char *unique_name) {
-	unsigned int index;
-	for (index = 0; index < client->services_count; index++) {
+static void	bluealsa_client_pcm_removed(bluealsa_client_t client, const char *path, const char *unique_name) {
+	if (client->remove_func == NULL)
+		return;
+	for (unsigned int index = 0; index < client->services_count; index++) {
 		struct bluealsa_client_service *service = &client->services[index];
 		if (strcmp(service->unique_name, unique_name) == 0) {
 			client->remove_func(path, client->user_data);
@@ -126,12 +128,10 @@ static void	bluealsa_client_pcm_removed(bluealsa_client_t *client, const char *p
 	}
 }
 
-static void	bluealsa_client_pcm_updated(bluealsa_client_t *client, const char *path, const char *unique_name, struct bluealsa_pcm_properties *props) {
-	unsigned int index;
+static void	bluealsa_client_pcm_updated(bluealsa_client_t client, const char *path, const char *unique_name, struct bluealsa_pcm_properties *props) {
 	if (client->update_func == NULL)
 		return;
-
-	for (index = 0; index < client->services_count; index++) {
+	for (unsigned int index = 0; index < client->services_count; index++) {
 		struct bluealsa_client_service *service = &client->services[index];
 		if (strcmp(service->unique_name, unique_name) == 0) {
 			client->update_func(path, service->well_known_name, props, client->user_data);
@@ -140,7 +140,7 @@ static void	bluealsa_client_pcm_updated(bluealsa_client_t *client, const char *p
 	}
 }
 
-static DBusHandlerResult bluealsa_client_objmgr_signal_handler(struct bluealsa_client *client, const char *signal, const char *service, DBusMessageIter *iter) {
+static DBusHandlerResult bluealsa_client_objmgr_signal_handler(bluealsa_client_t client, const char *signal, const char *service, DBusMessageIter *iter) {
 
 	if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_OBJECT_PATH)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -175,7 +175,6 @@ static DBusHandlerResult bluealsa_client_objmgr_signal_handler(struct bluealsa_c
 					dbus_error_free(&err);
 					return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 				}
-
 				bluealsa_client_pcm_added(client, &pcm, service);
 			}
 		}
@@ -203,7 +202,7 @@ static DBusHandlerResult bluealsa_client_objmgr_signal_handler(struct bluealsa_c
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static DBusHandlerResult bluealsa_client_name_signal_handler(struct bluealsa_client *client, const char *signal, DBusMessageIter *iter) {
+static DBusHandlerResult bluealsa_client_name_signal_handler(bluealsa_client_t client, const char *signal, DBusMessageIter *iter) {
 	if (strcmp(signal, "NameOwnerChanged") != 0)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
@@ -312,7 +311,7 @@ static DBusHandlerResult bluealsa_client_parse_properties(DBusMessageIter *iter,
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static DBusHandlerResult bluealsa_client_pcm_properties_changed(struct bluealsa_client *client, const char *path, const char *service, DBusMessageIter *iter) {
+static DBusHandlerResult bluealsa_client_pcm_properties_changed(bluealsa_client_t client, const char *path, const char *service, DBusMessageIter *iter) {
 	struct bluealsa_pcm_properties props = { 0 };
 	bluealsa_client_parse_properties(iter, bluealsa_client_parse_pcm_property, &props);
 	if (props.mask != 0)
@@ -320,7 +319,7 @@ static DBusHandlerResult bluealsa_client_pcm_properties_changed(struct bluealsa_
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static DBusHandlerResult bluealsa_client_properties_signal_handler(struct bluealsa_client *client, const char *path, const char *signal, const char *service, DBusMessageIter *iter) {
+static DBusHandlerResult bluealsa_client_properties_signal_handler(bluealsa_client_t client, const char *path, const char *signal, const char *service, DBusMessageIter *iter) {
 	if (strcmp(signal, "PropertiesChanged") != 0)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
@@ -341,7 +340,7 @@ static DBusHandlerResult bluealsa_client_properties_signal_handler(struct blueal
 
 static DBusHandlerResult bluealsa_client_dbus_signal_handler(DBusConnection *conn, DBusMessage *message, void *data) {
 	(void)conn;
-	struct bluealsa_client *client = data;
+	bluealsa_client_t client = data;
 
 	if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -368,9 +367,9 @@ static DBusHandlerResult bluealsa_client_dbus_signal_handler(DBusConnection *con
 	return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
-int bluealsa_client_open(bluealsa_client_t **client, struct bluealsa_client_callbacks *callbacks) {
+int bluealsa_client_open(bluealsa_client_t *client, struct bluealsa_client_callbacks *callbacks) {
 	int ret = 0;
-	bluealsa_client_t *new_client = calloc(sizeof(struct bluealsa_client), 1);
+	bluealsa_client_t new_client = calloc(sizeof(struct bluealsa_client), 1);
 	if (new_client == NULL)
 		return -ENOMEM;
 
@@ -406,14 +405,14 @@ fail:
 	return -ret;
 }
 
-int bluealsa_client_close(bluealsa_client_t *client) {
+int bluealsa_client_close(bluealsa_client_t client) {
 	ba_dbus_connection_ctx_free(&client->dbus_ctx);
 	free(client->services);
 	free(client);
 	return 0;
 }
 
-int bluealsa_client_get_pcms(bluealsa_client_t *client, const char *service) {
+int bluealsa_client_get_pcms(bluealsa_client_t client, const char *service) {
 	if (strlen(service) >= sizeof(client->dbus_ctx.ba_service))
 		return -EINVAL;
 
@@ -431,24 +430,24 @@ int bluealsa_client_get_pcms(bluealsa_client_t *client, const char *service) {
 	return 0;
 }
 
-int bluealsa_client_num_services(const bluealsa_client_t *client) {
+int bluealsa_client_num_services(const bluealsa_client_t client) {
 	return client->services_count;
 }
 
-int bluealsa_client_poll_fds(bluealsa_client_t *client, struct pollfd *fds, nfds_t *nfds) {
+int bluealsa_client_poll_fds(bluealsa_client_t client, struct pollfd *fds, nfds_t *nfds) {
 	if (!ba_dbus_connection_poll_fds(&client->dbus_ctx, fds, nfds))
 		return -1;
 	return 0;
 }
 
-int bluealsa_client_poll_dispatch(bluealsa_client_t *client, struct pollfd *pfds, nfds_t nfds) {
+int bluealsa_client_poll_dispatch(bluealsa_client_t client, struct pollfd *pfds, nfds_t nfds) {
 	if (ba_dbus_connection_poll_dispatch(&client->dbus_ctx, pfds, nfds))
 		while (dbus_connection_dispatch(client->dbus_ctx.conn) == DBUS_DISPATCH_DATA_REMAINS)
 			continue;
 	return 0;
 }
 
-int bluealsa_client_watch_service(bluealsa_client_t *client, const char *service) {
+int bluealsa_client_watch_service(bluealsa_client_t client, const char *service) {
 	struct bluealsa_client_service *services = realloc(client->services, (client->services_count + 1) * sizeof(struct bluealsa_client_service));
 	if (services == NULL)
 		return -ENOMEM;
@@ -490,7 +489,7 @@ int bluealsa_client_watch_service(bluealsa_client_t *client, const char *service
 	return 0;
 }
 
-int bluealsa_client_get_device(bluealsa_client_t *client, struct bluealsa_client_device *device) {
+int bluealsa_client_get_device(bluealsa_client_t client, struct bluealsa_client_device *device) {
 	struct bluez_device dev = { 0 };
 	if (dbus_bluez_get_device(client->dbus_ctx.conn, device->path, &dev, NULL) < 0)
 		return -1;
@@ -500,4 +499,75 @@ int bluealsa_client_get_device(bluealsa_client_t *client, struct bluealsa_client
 	ba2str(&dev.bt_addr, device->hex_addr);
 
 	return 0;
+}
+
+const char *bluealsa_client_transport_to_string(int transport_code) {
+	switch (transport_code) {
+	case BA_PCM_TRANSPORT_A2DP_SOURCE:
+		return "A2DP-source";
+	case BA_PCM_TRANSPORT_A2DP_SINK:
+		return "A2DP-sink";
+	case BA_PCM_TRANSPORT_HFP_AG:
+		return "HFP-AG";
+	case BA_PCM_TRANSPORT_HFP_HF:
+		return "HFP-HF";
+	case BA_PCM_TRANSPORT_HSP_AG:
+		return "HSP-AG";
+	case BA_PCM_TRANSPORT_HSP_HS:
+		return "HSP-HS";
+	case BA_PCM_TRANSPORT_MASK_A2DP:
+		return "A2DP";
+	case BA_PCM_TRANSPORT_MASK_HFP:
+		return "HFP";
+	case BA_PCM_TRANSPORT_MASK_HSP:
+		return "HSP";
+	case BA_PCM_TRANSPORT_MASK_SCO:
+		return "SCO";
+	case BA_PCM_TRANSPORT_MASK_AG:
+		return "AG";
+	case BA_PCM_TRANSPORT_MASK_HF:
+		return "HF";
+	default:
+		return "Invalid";
+	}
+}
+
+const char *bluealsa_client_mode_to_string(int pcm_mode) {
+	switch (pcm_mode) {
+	case BA_PCM_MODE_SINK:
+		return "sink";
+	case BA_PCM_MODE_SOURCE:
+		return "source";
+	default:
+		return "Invalid";
+	}
+}
+
+const char *bluealsa_client_format_to_string(int pcm_format) {
+	switch (pcm_format) {
+	case 0x0108:
+		return "U8";
+	case 0x8210:
+		return "S16_LE";
+	case 0x8318:
+		return "S24_3LE";
+	case 0x8418:
+		return "S24_LE";
+	case 0x8420:
+		return "S32_LE";
+	default:
+		return "Invalid";
+	}
+}
+
+const char *bluealsa_client_transport_to_profile(int transport_code) {
+	const char *profile = NULL;
+	if (transport_code & BA_PCM_TRANSPORT_MASK_A2DP)
+		profile = "A2DP";
+	else if (transport_code & BA_PCM_TRANSPORT_MASK_HFP)
+		profile = "HFP";
+	else if (transport_code & BA_PCM_TRANSPORT_MASK_HSP)
+		profile = "HSP";
+
+	return profile;
 }

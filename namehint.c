@@ -225,8 +225,7 @@ static bool bluealsa_namehint_hint_unref(struct bluealsa_namehint *hint, struct 
 	return false;
 }
 
-static void suppress_alsa_errors(const char *file, int line, const char *function, int err, const char *fmt, ...) {
-	return;
+static void suppress_alsa_errors(const char *, int, const char *, int, const char *, ...) {
 }
 
 static bool bluealsa_has_ctl_arg(snd_config_t *root, snd_config_t *ctl, const char *arg_equals_value) {
@@ -427,7 +426,7 @@ static int bluealsa_namehint_hint_expand_description(const struct bluealsa_nameh
 		if (*p == '%') {
 			switch (*(++p)) {
 			case 'n': /* name (alias) */ {
-				size_t len = strlen(h->device->alias);
+				len = strlen(h->device->alias);
 				if ((pos + len) >= end)
 					return -ENOMEM;
 				strcpy(pos, h->device->alias);
@@ -435,7 +434,7 @@ static int bluealsa_namehint_hint_expand_description(const struct bluealsa_nameh
 				break;
 			}
 			case 'a': /* address */ {
-				size_t len = strlen(h->device->hex_addr);
+				len = strlen(h->device->hex_addr);
 				if ((pos + len) >= end)
 					return -ENOMEM;
 				strcpy(pos, h->device->hex_addr);
@@ -443,7 +442,7 @@ static int bluealsa_namehint_hint_expand_description(const struct bluealsa_nameh
 				break;
 			}
 			case 'c': /* codec */ {
-				size_t len = strlen(h->codec);
+				len = strlen(h->codec);
 				if ((pos + len) >= end)
 					return -ENOMEM;
 				strcpy(pos, h->codec);
@@ -457,7 +456,6 @@ static int bluealsa_namehint_hint_expand_description(const struct bluealsa_nameh
 				break;
 			}
 			case 'p': /* profile */ {
-				size_t len;
 				const char *profile = profiles[h->profile].name;
 				len = strlen(profile);
 				if ((pos + len) >= end)
@@ -467,7 +465,6 @@ static int bluealsa_namehint_hint_expand_description(const struct bluealsa_nameh
 				break;
 			}
 			case 's': /* stream direction */ {
-				size_t len;
 				const char *stream =
 						h->stream == STREAM_PLAYBACK ? "Output" :
 							h->stream == STREAM_CAPTURE ?  "Input" : "Input/Output";
