@@ -120,12 +120,14 @@ A systemd system service unit file is included for `bluealsa-autoconfig`
 
 `bluealsa-agent` is a simple program to invoke arbitrary user commands in
 response to BlueALSA PCM D-Bus signals. It does not require `root` privileges
-and is intended to be used as a user service. For a trivial example, if it is
-required to display a desktop info pop-up whenever a BlueALSA PCM is added or
-removed, one could install the following shell script as
-`/usr/local/bin/bluealsa-notify` and then run the `bluealsa-agent` service as
+and is intended to be used as a user service.
+
+For a trivial example, suppose it is required to display a desktop info pop-up
+whenever a BlueALSA PCM is added or removed; one could install the following
+shell script as `/usr/local/bin/bluealsa-notify` and then run the
+`bluealsa-agent` service as
 ```
-bluealsa-agent /usr/bin/bluealsa-notify
+bluealsa-agent /usr/local/bin/bluealsa-notify
 ```
 
 ```
