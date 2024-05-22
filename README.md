@@ -133,21 +133,22 @@ bluealsa-agent /usr/local/bin/bluealsa-notify
 ```
 #!/bin/sh
 
-text="BlueALSA PCM "
+title="BlueALSA PCM"
 case "$1" in
 	"add")
-		text="$text added"
+		title="$title added"
 		;;
 	"remove")
-		text="$text removed"
+		title="$title removed"
 		;;
 	"update")
-		text="$text updated"
+		title="$title updated"
 		;;
 	*)
 		exit 0
 esac
-text="$text $2"
+
+text="dbus path: $2"
 
 [ "$BLUEALSA_PCM_PROPERTY_NAME" ] && text="${text}\nname: $BLUEALSA_PCM_PROPERTY_NAME"
 [ "$BLUEALSA_PCM_PROPERTY_ADDRESS" ] && text="${text}\naddress: $BLUEALSA_PCM_PROPERTY_ADDRESS"
@@ -162,7 +163,7 @@ text="$text $2"
 [ "$BLUEALSA_PCM_PROPERTY_RUNNING" ] && text="${text}\nrunning: $BLUEALSA_PCM_PROPERTY_RUNNING"
 [ "$BLUEALSA_PCM_PROPERTY_SOFTVOL" ] && text="${text}\nsoftvol: $BLUEALSA_PCM_PROPERTY_SOFTVOL"
 
-exec /usr/bin/zenity --info --text="$text" -
+exec /usr/bin/zenity --info --title="$title" --text="$text" -
 ```
 See the [manual page](./bluealsa-agent.8.rst.in) for full details.
 
