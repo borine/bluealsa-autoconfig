@@ -1,5 +1,5 @@
 /*
- * bluealsa-agent - bluealsa-agent.c
+ * bluealsa-agent - agent.c
  * Copyright (c) 2024 @borine (https://github.com/borine/)
  *
  * This project is licensed under the terms of the MIT license.
@@ -125,6 +125,7 @@ static void bluealsa_agent_get_progs(struct bluealsa_agent *agent, const char *p
 			}
 			++agent->prog_count;
 		}
+		closedir(dir);
 
 		qsort(agent->progs, agent->prog_count, sizeof(char *), cmpstringp);
 	}
@@ -193,7 +194,6 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_SAMPLING)
 		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_SAMPLING=%u", props->sampling);
 	if (agent->with_status) {
-info("setting status vars");
 		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_RUNNING=%s", props->running ? "true" : "false");
 		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", props->softvolume ? "true" : "false");
 	}
@@ -276,7 +276,6 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 		case 's' /* --status */ :
-info("enabled status");
 			agent.with_status = true;
 			break;
 
