@@ -109,12 +109,16 @@ information about the event to *COMMAND*. For the "add" event:
     ``16000``.
 
   ``BLUEALSA_PCM_PROPERTY_TRANSPORT``
-    The Bluetooth transport type, for example ``A2DP_source`` or ``HFP_AG``.
+    The Bluetooth transport role, for example ``A2DP-source`` or ``HFP-AG``.
 
   ``BLUEALSA_PCM_PROPERTY_SERVICE``
     The D-Bus well-known name of the BlueALSA service handling this PCM, for
     example ``org.bluealsa``.
 	
+  ``BLUEALSA_PCM_PROPERTY_ALSA_ID``
+    The ALSA name for this PCM. For example
+    ``bluealsa:DEV=00:11:22:33:44:55,PROFILE=A2DP``
+
 For the "update" event:
 
   ``BLUEALSA_PCM_PROPERTY_CODEC``

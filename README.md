@@ -96,7 +96,7 @@ selection dialog with the same Bluetooth speaker connected:
 `bluealsa-autoconfig` can also optionally create a new `default` device
 definition that uses a connected BlueALSA device; and it can also optionally
 trigger a `udev` audio device change event to notify ALSA applications when
-the configuration has changed.The `udev` option is particularly important when
+the configuration has changed. The `udev` option is particularly important when
 using applications such as `kodi` because otherwise they will not see the
 changes to the ALSA configuration and therefore will not display devices
 connected after the application started.
@@ -160,6 +160,7 @@ text="dbus path: $2"
 [ "$BLUEALSA_PCM_PROPERTY_SAMPLING" ] && text="${text}\nsampling: $BLUEALSA_PCM_PROPERTY_SAMPLING"
 [ "$BLUEALSA_PCM_PROPERTY_TRANSPORT" ] && text="${text}\ntransport: $BLUEALSA_PCM_PROPERTY_TRANSPORT"
 [ "$BLUEALSA_PCM_PROPERTY_SERVICE" ] && text="${text}\nservice: $BLUEALSA_PCM_PROPERTY_SERVICE"
+[ "$BLUEALSA_PCM_PROPERTY_ALSA_ID" ] && text="${text}\nALSA id: $BLUEALSA_PCM_PROPERTY_ALSA_ID"
 [ "$BLUEALSA_PCM_PROPERTY_RUNNING" ] && text="${text}\nrunning: $BLUEALSA_PCM_PROPERTY_RUNNING"
 [ "$BLUEALSA_PCM_PROPERTY_SOFTVOL" ] && text="${text}\nsoftvol: $BLUEALSA_PCM_PROPERTY_SOFTVOL"
 

@@ -1,6 +1,6 @@
 /*
  * bluealsa-autoconfig - bluealsa-client.h
- * Copyright (c) 2023 @borine (https://github.com/borine/)
+ * Copyright (c) 2024 @borine (https://github.com/borine/)
  *
  * This project is licensed under the terms of the MIT license.
  *
@@ -66,7 +66,8 @@ int bluealsa_client_watch_service(bluealsa_client_t client, const char *service)
 int bluealsa_client_poll_fds(bluealsa_client_t client, struct pollfd *fds, nfds_t *nfds);
 int bluealsa_client_poll_dispatch(bluealsa_client_t client, struct pollfd *fds, nfds_t nfds);
 
-const char *bluealsa_client_transport_to_string(int transport_code);
+const char *bluealsa_client_transport_to_role(int transport_code);
+const char *bluealsa_client_transport_to_type(int transport_code);
 const char *bluealsa_client_transport_to_profile(int transport_code);
 const char *bluealsa_client_mode_to_string(int pcm_mode);
 const char *bluealsa_client_format_to_string(int pcm_format);

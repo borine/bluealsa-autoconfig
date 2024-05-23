@@ -38,7 +38,7 @@ struct bluealsa_agent {
 };
 
 typedef struct {
-	char string[12][256];
+	char string[13][256];
 	size_t count;
 } envvars_t;
 
@@ -146,26 +146,32 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 	envvars_t envvars;
 	size_t n = 0;
 	struct bluealsa_client_device device = { .path = pcm->device_path };
-	const char *profile;
+	const char *value;
 
 	bluealsa_client_get_device(agent->client, &device);
 
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_ADDRESS=%s", device.hex_addr);
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_NAME=%s", device.alias);
-	if ((profile = bluealsa_client_transport_to_profile(pcm->transport)) != NULL)
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_PROFILE=%s", profile);
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_MODE=%s", bluealsa_client_mode_to_string(pcm->mode));
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_CODEC=%s", pcm->codec.name);
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_FORMAT=%s", bluealsa_client_format_to_string(pcm->format));
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_CHANNELS=%u", pcm->channels);
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_SAMPLING=%u", pcm->sampling);
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_TRANSPORT=%s", bluealsa_client_transport_to_string(pcm->transport));
-	sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_SERVICE=%s", service);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_ADDRESS=%s", device.hex_addr);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_NAME=%s", device.alias);
+	if ((value = bluealsa_client_transport_to_profile(pcm->transport)) != NULL)
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_PROFILE=%s", value);
+	if ((value = bluealsa_client_mode_to_string(pcm->mode)) != NULL)
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_MODE=%s", value);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", pcm->codec.name);
+	if ((value = bluealsa_client_format_to_string(pcm->format)) != NULL)
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_FORMAT=%s", value);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANNELS=%u", pcm->channels);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SAMPLING=%u", pcm->sampling);
+	if ((value = bluealsa_client_transport_to_role(pcm->transport)) != NULL)
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_TRANSPORT=%s", value);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SERVICE=%s", service);
+	if ((value = bluealsa_client_transport_to_type(pcm->transport)) != NULL) {
+		const bool show_service = strcmp(service, "org.bluealsa") > 0;
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_ALSA_ID=bluealsa:DEV=%s,PROFILE=%s%s%s", device.hex_addr, value, show_service ? ",SRV=" : "", show_service ? service : "");
+	}
 
 	if (agent->with_status) {
-info("setting status vars");
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_RUNNING=%s", pcm->running ? "true" : "false");
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", pcm->soft_volume ? "true" : "false");
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", pcm->running ? "true" : "false");
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", pcm->soft_volume ? "true" : "false");
 	}
 
 	envvars.count = n;
@@ -186,16 +192,16 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	size_t n = 0;
 
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC)
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_CODEC=%s", props->codec);
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", props->codec);
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_FORMAT)
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_FORMAT=%s", bluealsa_client_format_to_string(props->format));
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_FORMAT=%s", bluealsa_client_format_to_string(props->format));
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CHANNELS)
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_CHANNELS=%u", props->channels);
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANNELS=%u", props->channels);
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_SAMPLING)
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_SAMPLING=%u", props->sampling);
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SAMPLING=%u", props->sampling);
 	if (agent->with_status) {
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_RUNNING=%s", props->running ? "true" : "false");
-		sprintf(envvars.string[n++], "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", props->softvolume ? "true" : "false");
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", props->running ? "true" : "false");
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", props->softvolume ? "true" : "false");
 	}
 
 	if (n == 0)

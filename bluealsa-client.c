@@ -501,7 +501,7 @@ int bluealsa_client_get_device(bluealsa_client_t client, struct bluealsa_client_
 	return 0;
 }
 
-const char *bluealsa_client_transport_to_string(int transport_code) {
+const char *bluealsa_client_transport_to_role(int transport_code) {
 	switch (transport_code) {
 	case BA_PCM_TRANSPORT_A2DP_SOURCE:
 		return "A2DP-source";
@@ -515,21 +515,17 @@ const char *bluealsa_client_transport_to_string(int transport_code) {
 		return "HSP-AG";
 	case BA_PCM_TRANSPORT_HSP_HS:
 		return "HSP-HS";
-	case BA_PCM_TRANSPORT_MASK_A2DP:
-		return "A2DP";
-	case BA_PCM_TRANSPORT_MASK_HFP:
-		return "HFP";
-	case BA_PCM_TRANSPORT_MASK_HSP:
-		return "HSP";
-	case BA_PCM_TRANSPORT_MASK_SCO:
-		return "SCO";
-	case BA_PCM_TRANSPORT_MASK_AG:
-		return "AG";
-	case BA_PCM_TRANSPORT_MASK_HF:
-		return "HF";
 	default:
-		return "Invalid";
+		return NULL;
 	}
+}
+
+const char *bluealsa_client_transport_to_type(int transport_code) {
+	if (transport_code & BA_PCM_TRANSPORT_MASK_A2DP)
+		return "A2DP";
+	if (transport_code & BA_PCM_TRANSPORT_MASK_SCO)
+		return "SCO";
+	return NULL;
 }
 
 const char *bluealsa_client_mode_to_string(int pcm_mode) {
@@ -539,7 +535,7 @@ const char *bluealsa_client_mode_to_string(int pcm_mode) {
 	case BA_PCM_MODE_SOURCE:
 		return "source";
 	default:
-		return "Invalid";
+		return NULL;
 	}
 }
 
@@ -556,18 +552,16 @@ const char *bluealsa_client_format_to_string(int pcm_format) {
 	case 0x8420:
 		return "S32_LE";
 	default:
-		return "Invalid";
+		return NULL;
 	}
 }
 
 const char *bluealsa_client_transport_to_profile(int transport_code) {
-	const char *profile = NULL;
 	if (transport_code & BA_PCM_TRANSPORT_MASK_A2DP)
-		profile = "A2DP";
+		return "A2DP";
 	else if (transport_code & BA_PCM_TRANSPORT_MASK_HFP)
-		profile = "HFP";
+		return "HFP";
 	else if (transport_code & BA_PCM_TRANSPORT_MASK_HSP)
-		profile = "HSP";
-
-	return profile;
+		return "HSP";
+	return NULL;
 }
