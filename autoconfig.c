@@ -162,7 +162,7 @@ static void bluealsa_autoconfig_pcm_updated(const char *path, const char *servic
 	if (! (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC))
 		return;
 
-	if (bluealsa_namehint_pcm_update(config->hints, path, props->codec))
+	if (bluealsa_namehint_pcm_update(config->hints, path, props->codec.name))
 		bluealsa_autoconfig_set_timeout(config);
 }
 

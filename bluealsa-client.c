@@ -15,6 +15,7 @@
 #include <dbus/dbus.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/param.h>
 
 struct bluealsa_client_service {
 	char well_known_name[32];
@@ -262,8 +263,20 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 		const char *codec;
 		dbus_message_iter_get_basic(iter, &codec);
-		strncpy(props->codec, codec, sizeof(props->codec) - 1);
+		strncpy(props->codec.name, codec, sizeof(props->codec.name																																) - 1);
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_CODEC;
+	}
+	else if (strcmp(name, "CodecConfiguration") == 0) {
+		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_ARRAY)
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		DBusMessageIter iter_config;
+		uint8_t *config;
+		int len;
+		dbus_message_iter_recurse(iter, &iter_config);
+		dbus_message_iter_get_fixed_array(&iter_config, &config, &len);
+		props->codec.data_len = MIN((size_t)len, sizeof(props->codec.data));
+		memcpy(props->codec.data, config, props->codec.data_len);
+		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG;
 	}
 	else if (strcmp(name, "Delay") == 0) {
 		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_UINT16)
@@ -564,4 +577,17 @@ const char *bluealsa_client_transport_to_profile(int transport_code) {
 	else if (transport_code & BA_PCM_TRANSPORT_MASK_HSP)
 		return "HSP";
 	return NULL;
+}
+
+const char *bluealsa_client_codec_blob_to_string(const struct ba_pcm_codec *codec, char buffer[], size_t buflen) {
+
+	const size_t data_len = codec->data_len;
+	size_t n = 0;
+
+	if (data_len > 0) {
+		for (size_t i = 0; i < data_len && n < buflen - 2; i++, n += 2)
+			sprintf(&buffer[n], "%.2x", codec->data[i]);
+	}
+
+	return buffer;
 }

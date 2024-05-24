@@ -38,7 +38,7 @@ struct bluealsa_agent {
 };
 
 typedef struct {
-	char string[13][256];
+	char string[14][256];
 	size_t count;
 } envvars_t;
 
@@ -147,6 +147,7 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 	size_t n = 0;
 	struct bluealsa_client_device device = { .path = pcm->device_path };
 	const char *value;
+	char buffer[64];
 
 	bluealsa_client_get_device(agent->client, &device);
 
@@ -157,6 +158,10 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 	if ((value = bluealsa_client_mode_to_string(pcm->mode)) != NULL)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_MODE=%s", value);
 	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", pcm->codec.name);
+	if (pcm->codec.data_len > 0) {
+		bluealsa_client_codec_blob_to_string(&pcm->codec, buffer, sizeof(buffer));
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC_CONFIG=%s", buffer);
+	}
 	if ((value = bluealsa_client_format_to_string(pcm->format)) != NULL)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_FORMAT=%s", value);
 	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANNELS=%u", pcm->channels);
@@ -190,9 +195,14 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	struct bluealsa_agent *agent = data;
 	envvars_t envvars;
 	size_t n = 0;
+	char buffer[64];
 
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC)
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", props->codec);
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", props->codec.name);
+	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG) {
+		bluealsa_client_codec_blob_to_string(&props->codec, buffer, sizeof(buffer));
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC_CONFIG=%s", buffer);
+	}
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_FORMAT)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_FORMAT=%s", bluealsa_client_format_to_string(props->format));
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CHANNELS)
