@@ -1,6 +1,6 @@
 /*
  * bluealsa-autoconfig - bluealsa-client.c
- * Copyright (c) 2023 @borine (https://github.com/borine/)
+ * Copyright (c) 2023-2024 @borine (https://github.com/borine/)
  *
  * This project is licensed under the terms of the MIT license.
  *
@@ -440,6 +440,7 @@ int bluealsa_client_get_pcms(bluealsa_client_t client, const char *service) {
 	for (i = 0; i < count; i++)
 		client->add_func(&pcms[i], service, client->user_data);
 
+	free(pcms);
 	return 0;
 }
 

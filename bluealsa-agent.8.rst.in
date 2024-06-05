@@ -6,7 +6,7 @@ bluealsa-agent
 BlueALSA event handler helper utility
 -------------------------------------
 
-:Date: May 2024
+:Date: June 2024
 :Manual section: 8
 :Manual group: System Manager's Manual
 :Version: @VERSION@
@@ -44,6 +44,14 @@ OPTIONS
     For more information see the ``--dbus`` option of the ``bluealsa(8)``
     service daemon.
 
+-p PROFILE, --profile=PROFILE
+    Invoke commands only for PCMs having profile *PROFILE*. *PROFILE* may be
+    "a2dp" or "sco". The default is to invoke commands for both profiles.
+
+-m MODE, --mode=MODE
+    Invoke commands only for PCMs having mode *MODE*. *MODE* may be "sink" or
+    "source". The default is to invoke commands for both modes.
+
 -s, --status
 	Invoke the *COMMAND* also when the PCM "Running" or "$oftvol" status
 	changes. See COMMAND_ below.
@@ -78,7 +86,9 @@ where *EVENT* is one of ``add``, ``remove`` or ``update`` and *PCM-PATH* is the
 D-Bus object path of the PCM associated with the event.
 
 **bluealsa-agent** also sets environment variables to pass additional
-information about the event to *COMMAND*. For the "add" event:
+information about the event to *COMMAND*.
+
+For the "add" event:
 
   ``BLUEALSA_PCM_PROPERTY_ADDRESS``
     The Bluetooth address of the device as `XX:XX:XX:XX:XX:XX`
@@ -129,8 +139,8 @@ For the "update" event:
 
   ``BLUEALSA_PCM_PROPERTY_SAMPLING``
 
-When *--status* is used, then two addtional environment variables are also
-set:
+When *--status* is used, then two addtional environment variables are also set
+for the "added" and "update" events:
  
   ``BLUEALSA_PCM_PROPERTY_RUNNING``
     ``true`` if the PCM is running (i.e. when the underlying Bluetooth transport
@@ -139,6 +149,16 @@ set:
   ``BLUEALSA_PCM_PROPERTY_SOFTVOL``
     ``true`` when the BlueALSA "SoftVolume" property is enabled for this PCM.
     See ``bluealsa(8)`` for more information.
+
+For the "remove" event:
+
+  ``BLUEALSA_PCM_PROPERTY_ADDRESS``
+
+  ``BLUEALSA_PCM_PROPERTY_NAME``
+
+  ``BLUEALSA_PCM_PROPERTY_PROFILE``
+
+  ``BLUEALSA_PCM_PROPERTY_MODE``
 
 SEE ALSO
 ========

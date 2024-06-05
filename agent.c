@@ -30,11 +30,38 @@
 #include "bluez-alsa/shared/log.h"
 #include "version.h"
 
+enum bluealsa_profile {
+	PROFILE_ALL = 0,
+	PROFILE_A2DP = BA_PCM_TRANSPORT_MASK_A2DP,
+	PROFILE_SCO = BA_PCM_TRANSPORT_MASK_SCO,
+};
+
+enum bluealsa_mode {
+	MODE_ALL = 0,
+	MODE_SINK = BA_PCM_MODE_SINK,
+	MODE_SOURCE = BA_PCM_MODE_SOURCE,
+};
+
+struct bluealsa_pcm_data {
+	char path[128];
+	char address[18];
+	char alias[64];
+	char profile[5];
+	char mode[9];
+};
+
 struct bluealsa_agent {
 	bluealsa_client_t client;
 	char **progs;
 	size_t prog_count;
 	bool with_status;
+	enum bluealsa_profile profile;
+	enum bluealsa_mode mode;
+	struct {
+		struct bluealsa_pcm_data *data;
+		size_t capacity;
+		size_t count;
+	} pcms;
 };
 
 typedef struct {
@@ -42,7 +69,55 @@ typedef struct {
 	size_t count;
 } envvars_t;
 
+
 static volatile bool running = true;
+
+static bool bluealsa_agent_filter(const struct bluealsa_agent *agent, const struct ba_pcm *pcm) {
+	const bool profile_match = (agent->profile == PROFILE_ALL) ||
+									(agent->profile & pcm->transport);
+	const bool mode_match = (agent->mode == MODE_ALL) || (pcm->mode == agent->mode);
+ 	return profile_match && mode_match;
+}
+
+static bool bluealsa_agent_add_pcm_path(struct bluealsa_agent *agent, const char *path,
+			const char *address, const char *alias, const char *profile, const char *mode) {
+	if (agent->pcms.count == agent->pcms.capacity) {
+		const size_t new_size = 2 * agent->pcms.capacity;
+		struct bluealsa_pcm_data *tmp = realloc(agent->pcms.data, new_size * sizeof(*agent->pcms.data));
+		if (tmp == NULL)
+			return false;
+
+		agent->pcms.data = tmp;
+		agent->pcms.capacity = new_size;
+	}
+	memcpy(agent->pcms.data[agent->pcms.count].path, path, sizeof(agent->pcms.data[agent->pcms.count].path));
+	memcpy(agent->pcms.data[agent->pcms.count].address, address, sizeof(agent->pcms.data[agent->pcms.count].address));
+	memcpy(agent->pcms.data[agent->pcms.count].alias, alias, sizeof(agent->pcms.data[agent->pcms.count].alias));
+	memcpy(agent->pcms.data[agent->pcms.count].profile, profile, sizeof(agent->pcms.data[agent->pcms.count].profile));
+	memcpy(agent->pcms.data[agent->pcms.count].mode, mode, sizeof(agent->pcms.data[agent->pcms.count].mode));
+	
+	agent->pcms.count++;
+	return true;
+}
+
+static bool bluealsa_agent_remove_pcm_path(struct bluealsa_agent *agent, const char *path) {
+	for (size_t n = 0; n < agent->pcms.count; n++) {
+		if (strcmp(path, agent->pcms.data[n].path) == 0) {
+			agent->pcms.count--;
+			memcpy(&agent->pcms.data[n], &agent->pcms.data[agent->pcms.count], sizeof(*agent->pcms.data));
+			return true;
+		}
+	}
+	return false;
+}
+
+static const struct bluealsa_pcm_data *bluealsa_agent_find_pcm_data(struct bluealsa_agent *agent, const char *path) {
+	for (size_t n = 0; n < agent->pcms.count; n++) {
+		if (strcmp(path, agent->pcms.data[n].path) == 0)
+			return &agent->pcms.data[n];
+	}
+	return NULL;
+}
 
 static void bluealsa_agent_run_prog(const char *prog, const char *event, const char *obj_path, envvars_t *envp, bool wait) {
 	pid_t pid = fork();
@@ -146,17 +221,31 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 	envvars_t envvars;
 	size_t n = 0;
 	struct bluealsa_client_device device = { .path = pcm->device_path };
+	const char *profile, *mode;
+
 	const char *value;
 	char buffer[64];
 
+	if (!bluealsa_agent_filter(agent, pcm))
+		return;
+
+	if ((profile = bluealsa_client_transport_to_profile(pcm->transport)) == NULL)
+		return;
+
+	if ((mode = bluealsa_client_mode_to_string(pcm->mode)) == NULL)
+		return;
+
 	bluealsa_client_get_device(agent->client, &device);
+
+	if (!bluealsa_agent_add_pcm_path(agent, pcm->pcm_path, device.hex_addr, device.alias, profile, mode)) {
+		error("Out of memory");
+		return;
+	}
 
 	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_ADDRESS=%s", device.hex_addr);
 	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_NAME=%s", device.alias);
-	if ((value = bluealsa_client_transport_to_profile(pcm->transport)) != NULL)
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_PROFILE=%s", value);
-	if ((value = bluealsa_client_mode_to_string(pcm->mode)) != NULL)
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_MODE=%s", value);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_PROFILE=%s", profile);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_MODE=%s", mode);
 	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", pcm->codec.name);
 	if (pcm->codec.data_len > 0) {
 		bluealsa_client_codec_blob_to_string(&pcm->codec, buffer, sizeof(buffer));
@@ -187,7 +276,21 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 
 static void bluealsa_agent_pcm_removed(const char *path, void *data) {
 	struct bluealsa_agent *agent = data;
-	bluealsa_agent_run_progs(agent, "remove", path, NULL);
+	const struct bluealsa_pcm_data *pcm_data;
+	envvars_t envvars;
+	size_t n = 0;
+
+	if ((pcm_data = bluealsa_agent_find_pcm_data(agent, path)) == NULL)
+		return;
+
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_ADDRESS=%s", pcm_data->address);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_NAME=%s", pcm_data->alias);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_PROFILE=%s", pcm_data->profile);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_MODE=%s", pcm_data->mode);
+	envvars.count = n;
+
+	if (bluealsa_agent_remove_pcm_path(agent, path))
+		bluealsa_agent_run_progs(agent, "remove", path, &envvars);
 }
 
 static void bluealsa_agent_pcm_updated(const char *path, const char *service, struct bluealsa_pcm_properties *props, void *data) {
@@ -196,6 +299,10 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	envvars_t envvars;
 	size_t n = 0;
 	char buffer[64];
+	const struct bluealsa_pcm_data *pcm_data;
+
+	if ((pcm_data = bluealsa_agent_find_pcm_data(agent, path)) == NULL)
+		return;
 
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", props->codec.name);
@@ -254,10 +361,12 @@ int main(int argc, char *argv[]) {
 	const char *programs = NULL;
 
 	int opt;
-	const char *opts = "hV:B:s";
+	const char *opts = "hVp:m:B:s";
 	const struct option longopts[] = {
 		{ "help", no_argument, NULL, 'h' },
 		{ "version", no_argument, NULL, 'V' },
+		{ "profile", required_argument, NULL, 'p' },
+		{ "mode", required_argument, NULL, 'm' },
 		{ "dbus", required_argument, NULL, 'B'},
 		{ "status", no_argument, NULL, 's' },
 		{ 0, 0, 0, 0 },
@@ -270,10 +379,12 @@ int main(int argc, char *argv[]) {
 					"\nUsage:\n"
 					"  %1$s [OPTION]... PROGRAM\n"
 					"\nOptions:\n"
-					"  -h, --help\t\tprint this help and exit\n"
-					"  -V, --version\t\tprint version and exit\n"
-					"  -B, --dbus=NAME\tBlueALSA service name suffix\n"
-					"  -s, --status\t\thandle status change events\n"
+					"  -h, --help\t\t\tprint this help and exit\n"
+					"  -V, --version\t\t\tprint version and exit\n"
+					"  -p, --profile=[a2dp|sco]\tselect only given profile\n"
+					"  -m, --mode=[sink|source]\tselect only given mode\n"
+					"  -B, --dbus=NAME\t\tBlueALSA service name suffix\n"
+					"  -s, --status\t\t\thandle status change events\n"
 					"\nPROGRAM:\n"
 					"  path to program, or directory of programs, to be run "
 					"when BlueALSA event occurs\n",
@@ -283,6 +394,30 @@ int main(int argc, char *argv[]) {
 		case 'V' /* --version */ :
 			printf("%s\n", PACKAGE_VERSION);
 			return EXIT_SUCCESS;
+
+		case 'p' /* --profile=[a2dp|sco] */ : {
+			if (strcmp(optarg, "a2dp") == 0)
+				agent.profile = PROFILE_A2DP;
+			else if (strcmp(optarg, "sco") == 0)
+				agent.profile = PROFILE_SCO;
+			else {
+				fprintf(stderr, "Invalid profile (%s)\n", optarg);
+				return EXIT_FAILURE;
+			}
+			break;
+		}
+
+		case 'm' /* --mode=[sink|source] */ : {
+			if (strcmp(optarg, "sink") == 0)
+				agent.mode = MODE_SINK;
+			else if (strcmp(optarg, "source") == 0)
+				agent.mode = MODE_SOURCE;
+			else {
+				fprintf(stderr, "Invalid mode (%s)\n", optarg);
+				return EXIT_FAILURE;
+			}
+			break;
+		}
 
 		case 'B' /* --dbus=NAME */ : {
 			char service[32];
@@ -307,6 +442,13 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	programs = argv[optind];
+
+	agent.pcms.data = calloc(8, sizeof(*agent.pcms.data));
+	if (agent.pcms.data == NULL) {
+		error("Out of memory");
+		exit(EXIT_FAILURE);
+	}
+	agent.pcms.capacity = 8;
 
 	bluealsa_agent_get_progs(&agent, programs);
 	if (agent.prog_count == 0)
