@@ -14,12 +14,26 @@ _bluealsa_autoconfig() {
 _bluealsa_agent() {
 	local cur prev words cword split
 	_init_completion -s || return
-	if [[ "$prev" = "--dbus" ]] ; then
+	case "$prev" in
+	"--dbus")
 		COMPREPLY=()
 		return
+		;;
+	"--mode")
+		COMPREPLY=( $(compgen -W "sink source" -- $cur) )
+		return
+		;;
+	"--profile")
+		COMPREPLY=( $(compgen -W "a2dp sco" -- $cur) )
+		return
+		;;
+	esac
+	if [[ "$cur" == "-"* ]] ; then
+		COMPREPLY=( $(compgen -W "$(_parse_help $1)" -- $cur) )
+		[[ $COMPREPLY == *= ]] && compopt -o nospace
+	else
+		COMPREPLY=( $(compgen -f $cur) )
 	fi
-	COMPREPLY=( $(compgen -W "$(_parse_help $1)" -- $cur) )
-	[[ $COMPREPLY == *= ]] && compopt -o nospace
 }
 
 complete -F _bluealsa_autoconfig bluealsa-autoconfig
