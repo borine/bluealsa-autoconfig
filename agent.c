@@ -131,7 +131,7 @@ static void bluealsa_agent_run_prog(const char *prog, const char *event, const c
 			}
 			execv(prog, argv);
 			error("Failed to execute %s (%s)", prog, strerror(errno));
-			break;
+			exit(1);
 		}
 	case -1:
 		error("Failed to fork process for %s (%s)", prog, strerror(errno));
