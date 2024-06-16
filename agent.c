@@ -304,6 +304,12 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	if ((pcm_data = bluealsa_agent_find_pcm_data(agent, path)) == NULL)
 		return;
 
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_ADDRESS=%s", pcm_data->address);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_NAME=%s", pcm_data->alias);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_PROFILE=%s", pcm_data->profile);
+	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_MODE=%s", pcm_data->mode);
+	envvars.count = n;
+
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", props->codec.name);
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG) {

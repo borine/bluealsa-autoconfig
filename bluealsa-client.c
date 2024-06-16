@@ -296,6 +296,12 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 		dbus_message_iter_get_basic(iter, &props->volume);
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME;
 	}
+	else if (strcmp(name, "Running") == 0) {
+		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_BOOLEAN)
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		dbus_message_iter_get_basic(iter, &props->running);
+		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING;
+	}
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
