@@ -88,10 +88,18 @@ D-Bus object path of the PCM associated with the event.
 **bluealsa-agent** also sets environment variables to pass additional
 information about the event to *COMMAND*.
 
-For the "add" event:
+These variables are set for all events:
 
   ``BLUEALSA_PCM_PROPERTY_ADDRESS``
     The Bluetooth address of the device as `XX:XX:XX:XX:XX:XX`
+
+  ``BLUEALSA_PCM_PROPERTY_CODEC``
+    The used codec, for example ``SBC``, ``AAC``, or ``mSBC``. Note that for the
+    ``HFP`` profile the codec may be unset when the PCM is added, but will be
+    reported in an ``update`` event as soon as the codec is set.
+
+  ``BLUEALSA_PCM_PROPERTY_MODE``
+    The stream direction, either ``sink`` or ``source``
 
   ``BLUEALSA_PCM_PROPERTY_NAME``
     The ``alias`` of the device, for example ``"Jabra MOVE v2.3.0"``
@@ -99,45 +107,32 @@ For the "add" event:
   ``BLUEALSA_PCM_PROPERTY_PROFILE``
     The Bluetooth profile, for example ``A2DP`` or ``HFP``
 
-  ``BLUEALSA_PCM_PROPERTY_MODE``
-    The stream direction, either ``sink`` or ``source``
+  ``BLUEALSA_PCM_PROPERTY_SERVICE``
+    The D-Bus well-known name of the BlueALSA service handling this PCM, for
+    example ``org.bluealsa``.
 
-  ``BLUEALSA_PCM_PROPERTY_CODEC``
-    The used codec, for example ``SBC``, ``AAC``, or ``mSBC``. Note that for the
-    ``HFP`` profile the codec may be unset when the PCM is added, but will be
-    reported in an ``update`` event as soon as the codec is set.
+  ``BLUEALSA_PCM_PROPERTY_TRANSPORT``
+    The Bluetooth transport role, for example ``A2DP-source`` or ``HFP-AG``.
+
+  ``BLUEALSA_PCM_PROPERTY_ALSA_ID``
+    The ALSA name for this PCM. For example
+    ``bluealsa:DEV=00:11:22:33:44:55,PROFILE=A2DP``
+
+The "add" and "update" events additionally set:
+
+  ``BLUEALSA_PCM_PROPERTY_CHANNELS``
+    The number of audio channels, for example ``2`` for stereo, ``1`` for mono.
+
+  ``BLUEALSA_PCM_PROPERTY_CODEC_CONFIG`` (where appropriate)
+    The used codec configuration "blob" as a hexadecimal string.
 
   ``BLUEALSA_PCM_PROPERTY_FORMAT``
     The audio sample format. For most codecs used by Bluetooth PCMs this is
     ``S16_LE``.
 
-  ``BLUEALSA_PCM_PROPERTY_CHANNELS``
-    The number of audio channels, for example ``2`` for stereo, ``1`` for mono.
-
   ``BLUEALSA_PCM_PROPERTY_SAMPLING``
     The audio sample rate in frames per second, for example ``48000`` or
     ``16000``.
-
-  ``BLUEALSA_PCM_PROPERTY_TRANSPORT``
-    The Bluetooth transport role, for example ``A2DP-source`` or ``HFP-AG``.
-
-  ``BLUEALSA_PCM_PROPERTY_SERVICE``
-    The D-Bus well-known name of the BlueALSA service handling this PCM, for
-    example ``org.bluealsa``.
-	
-  ``BLUEALSA_PCM_PROPERTY_ALSA_ID``
-    The ALSA name for this PCM. For example
-    ``bluealsa:DEV=00:11:22:33:44:55,PROFILE=A2DP``
-
-For the "update" event:
-
-  ``BLUEALSA_PCM_PROPERTY_CODEC``
-
-  ``BLUEALSA_PCM_PROPERTY_FORMAT``
-
-  ``BLUEALSA_PCM_PROPERTY_CHANNELS``
-
-  ``BLUEALSA_PCM_PROPERTY_SAMPLING``
 
 When *--status* is used, then two addtional environment variables are also set
 for the "added" and "update" events:
@@ -150,15 +145,26 @@ for the "added" and "update" events:
     ``true`` when the BlueALSA "SoftVolume" property is enabled for this PCM.
     See ``bluealsa(8)`` for more information.
 
-For the "remove" event:
+To identify which properties have changed in an "update" event, one other
+environment variable is set:
 
-  ``BLUEALSA_PCM_PROPERTY_ADDRESS``
+  ``BLUEALSA_PCM_PROPERTY_CHANGES``
+    A space-separated list indicating the cahnged properties, consisting of one
+    or more from:
 
-  ``BLUEALSA_PCM_PROPERTY_NAME``
+      CHANNELS
 
-  ``BLUEALSA_PCM_PROPERTY_PROFILE``
+      CODEC
 
-  ``BLUEALSA_PCM_PROPERTY_MODE``
+      CODEC_CONFIG
+
+      FORMAT
+
+      RUNNING
+
+      SAMPLING
+
+      SOFTVOL
 
 SEE ALSO
 ========
