@@ -170,6 +170,8 @@ exec /usr/bin/zenity --info --title="$title" --text="$text" -
 ```
 See the [manual page](./bluealsa-agent.8.rst.in) for full details.
 
+Some more practical example scripts are included in the [examples directory](./examples/examples.md)
+
 ## Installation
 
 ```
