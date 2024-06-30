@@ -66,13 +66,13 @@ struct bluealsa_agent {
 		size_t capacity;
 		size_t count;
 	} pcms;
+	bool wait;
 };
 
 typedef struct {
 	char string[14][256];
 	size_t count;
 } envvars_t;
-
 
 static volatile bool running = true;
 
@@ -82,7 +82,6 @@ static bool bluealsa_agent_filter(const struct bluealsa_agent *agent, const stru
 	const bool mode_match = (agent->mode == MODE_ALL) || (pcm->mode == agent->mode);
  	return profile_match && mode_match;
 }
-
 
 static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 				struct bluealsa_agent *agent,
@@ -180,9 +179,8 @@ static void bluealsa_agent_run_prog(const char *prog, const char *event, const c
 }
 
 static void bluealsa_agent_run_progs(struct bluealsa_agent *agent, const char *event, const char *obj_path, envvars_t *envp) {
-	const bool wait = agent->prog_count > 1;
 	for (size_t n = 0; n < agent->prog_count; n++) {
-		bluealsa_agent_run_prog(agent->progs[n], event, obj_path, envp, wait);
+		bluealsa_agent_run_prog(agent->progs[n], event, obj_path, envp, agent->wait);
 	}
 }
 
@@ -237,11 +235,13 @@ static void bluealsa_agent_get_progs(struct bluealsa_agent *agent, const char *p
 		closedir(dir);
 
 		qsort(agent->progs, agent->prog_count, sizeof(char *), cmpstringp);
+		agent->wait = true;
 	}
 	else if (S_ISREG(statbuf.st_mode)) {
 		agent->progs = malloc(sizeof(char*));
 		agent->progs[0] = strdup(program);
 		agent->prog_count = 1;
+		agent->wait = false;
 	}
 	else {
 		error("Invalid file type for program '%s'", program);
