@@ -1,0 +1,37 @@
+[Unit]
+Description=BlueALSA Agent service
+Documentation=man:bluealsa-agent(8)
+After=dbus.service
+
+[Service]
+Type=simple
+@ENVIRONMENT_FILE@
+ExecStart=@bindir@/bluealsa-agent @ARGS@
+@USER@
+@GROUP@
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+NoNewPrivileges=true
+PrivateMounts=
+PrivateTmp=true
+PrivateUsers=true
+ProtectClock=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectHome=read-only
+ProtectHostname=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectProc=invisible
+ProtectSystem=full
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@resources
+
+[Install]
+WantedBy=default.target

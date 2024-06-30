@@ -89,22 +89,7 @@ install_data(
 )
 
 if systemd.found()
-	sysunitdir = join_paths(prefix, 'lib', 'systemd', 'system')
-	configure_file(
-		input : 'bluealsa-autoconfig.service.in',
-		output : 'bluealsa-autoconfig.service',
-		configuration : conf_data,
-		install: true,
-		install_dir: sysunitdir
-	)
-	userunitdir = join_paths(prefix, 'lib', 'systemd', 'user')
-	configure_file(
-		input : 'bluealsa-agent.service.in',
-		output : 'bluealsa-agent.service',
-		configuration : conf_data,
-		install: true,
-		install_dir: userunitdir
-	)
+	subdir('systemd')
 endif
 
 if get_option('doc')
@@ -145,4 +130,7 @@ if bashcompletion.found()
 		rename: 'bluealsa-autoconfig',
 		install_dir: completionsdir,
 	)
+	dst = join_paths(completionsdir, 'bluealsa-agent')
+	cmd = 'ln -fs @0@ $DESTDIR@1@'.format('bluealsa-autoconfig', dst)
+	meson.add_install_script('sh', '-c', cmd)
 endif
