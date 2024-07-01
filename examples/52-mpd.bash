@@ -5,28 +5,35 @@ BLUETOOTH_OUTPUT=2
 
 [[ "$BLUEALSA_PCM_PROPERTY_PROFILE" == "A2DP" ]] || exit
 
+DATADIR="/tmp/bluealsa-agent/52-mpd"
+
 case "$BLUEALSA_PCM_PROPERTY_MODE" in
 "sink")
 	state=$(mpc status "%state%")
 	case "$1" in
 	"add")
 		mpc -q pause
-		mpc -q enable "$BLUETOOTH_OUTPUT"
-		mpc -q disable "$CARD_OUTPUT"
+		mpc -q enable "$BLUETOOTH_OUTPUT" >/dev/null
+		mpc -q disable "$CARD_OUTPUT" >/dev/null
 		[[ "$state" == "playing" ]] && mpc -q play
 		;;
 	"remove")
 		mpc -q pause
-		mpc -q enable "$CARD_OUTPUT"
-		mpc -q disable "$BLUETOOTH_OUTPUT"
+		mpc -q enable "$CARD_OUTPUT" >/dev/null
+		mpc -q disable "$BLUETOOTH_OUTPUT" >/dev/null
 		[[ "$state" == "playing" ]] && mpc -q play
 		;;
 	esac
 	;;
 "source")
 	[[ "$BLUEALSA_PCM_PROPERTY_CHANGES" == *RUNNING* ]] || exit
+	[[ -d "$DATADIR" ]] || mkdir -p "$DATADIR" || {
+		echo "Cannot create state directory [$DATADIR]" >&2
+		exit 1
+	}
+
 	queue_backup=".bluetooth-interrupt"
-	status_file="/tmp/mpd-bluetooth"
+	status_file="${DATADIR}/status"
 	declare -i pos=0 ba_id=0 play_id
 	IFS=" #"
 	while read -r -a WORDS ; do
