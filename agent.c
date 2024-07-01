@@ -49,6 +49,10 @@ struct bluealsa_pcm_data {
 	char profile[5];
 	char mode[9];
 	char codec[16];
+	char codec_config[64];
+	char format[16];
+	char channels[3];
+	char sampling[8];
 	char transport[12];
 	char transport_type[5];
 	char service[32];
@@ -91,7 +95,7 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 
 	struct bluealsa_pcm_data *pcm_data;
 	struct bluealsa_client_device device = { .path = pcm->device_path };
-	const char *profile, *mode, *transport, *transport_type;
+	const char *profile, *mode, *transport, *transport_type, *format;
 
 	if ((profile = bluealsa_client_transport_to_profile(pcm->transport)) == NULL)
 		return NULL;
@@ -124,6 +128,12 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 	memcpy(pcm_data->profile, profile, sizeof(pcm_data->profile));
 	memcpy(pcm_data->mode, mode, sizeof(pcm_data->mode));
 	memcpy(pcm_data->codec, pcm->codec.name, sizeof(pcm_data->codec));
+	if (pcm->codec.data_len > 0)
+		bluealsa_client_codec_blob_to_string(&pcm->codec, pcm_data->codec_config, sizeof(pcm_data->codec_config));
+	if ((format = bluealsa_client_format_to_string(pcm->format)) != NULL)
+		memcpy(pcm_data->format, format, sizeof(pcm_data->format));
+	snprintf(pcm_data->channels, sizeof(pcm_data->channels), "%u", pcm->channels);
+	snprintf(pcm_data->sampling, sizeof(pcm_data->sampling), "%u", pcm->sampling);
 	memcpy(pcm_data->transport, transport, sizeof(pcm_data->transport));
 	memcpy(pcm_data->transport_type, transport_type, sizeof(pcm_data->transport_type));
 	memcpy(pcm_data->service, service, sizeof(pcm_data->service));
@@ -257,6 +267,10 @@ static size_t bluealsa_agent_init_envvars(envvars_t *envvars, const struct bluea
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_PROFILE=%s", pcm_data->profile);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_MODE=%s", pcm_data->mode);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", pcm_data->codec);
+	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC_CONFIG=%s", pcm_data->codec_config);
+	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_FORMAT=%s", pcm_data->format);
+	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANNELS=%s", pcm_data->channels);
+	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_SAMPLING=%s", pcm_data->sampling);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_TRANSPORT=%s", pcm_data->transport);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE=%s", pcm_data->transport_type);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_SERVICE=%s", pcm_data->service);
@@ -272,9 +286,6 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 	envvars_t envvars;
 	size_t n;
 
-	const char *value;
-	char buffer[64];
-
 	if (!bluealsa_agent_filter(agent, pcm))
 		return;
 
@@ -284,15 +295,6 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 	}
 
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
-
-	if (pcm->codec.data_len > 0) {
-		bluealsa_client_codec_blob_to_string(&pcm->codec, buffer, sizeof(buffer));
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC_CONFIG=%s", buffer);
-	}
-	if ((value = bluealsa_client_format_to_string(pcm->format)) != NULL)
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_FORMAT=%s", value);
-	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANNELS=%u", pcm->channels);
-	snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SAMPLING=%u", pcm->sampling);
 
 	if (agent->with_status) {
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", pcm->running ? "true" : "false");
@@ -324,7 +326,7 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	struct bluealsa_agent *agent = data;
 	envvars_t envvars;
 	size_t n;
-	char buffer[64], changes[64] = {0};
+	char changes[64] = {0};
 	struct bluealsa_pcm_data *pcm_data;
 
 	if ((props->mask & ~(BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME | BLUEALSA_PCM_PROPERTY_CHANGED_DELAY)) == 0)
@@ -337,26 +339,26 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 		memcpy(pcm_data->codec, props->codec.name, sizeof(pcm_data->codec));
 		strcpy(changes, "CODEC ");
 	}
-
-	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
-
-	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG) {
-		bluealsa_client_codec_blob_to_string(&props->codec, buffer, sizeof(buffer));
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC_CONFIG=%s", buffer);
-		strcat(changes, "CODEC_CONFIG ");
-	}
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_FORMAT) {
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_FORMAT=%s", bluealsa_client_format_to_string(props->format));
+		memcpy(pcm_data->format, bluealsa_client_format_to_string(props->format), sizeof(pcm_data->format));
 		strcat(changes, "FORMAT ");
 	}
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CHANNELS) {
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANNELS=%u", props->channels);
+		snprintf(pcm_data->channels, sizeof(pcm_data->channels), "%u", props->channels);
 		strcat(changes, "CHANNELS ");
 	}
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_SAMPLING) {
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SAMPLING=%u", props->sampling);
+		snprintf(pcm_data->sampling, sizeof(pcm_data->sampling), "%u", props->sampling);
 		strcat(changes, "SAMPLING ");
 	}
+
+	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG) {
+		bluealsa_client_codec_blob_to_string(&props->codec, pcm_data->codec_config, sizeof(pcm_data->codec_config));
+		strcat(changes, "CODEC_CONFIG ");
+	}
+
+	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
+
 	if (agent->with_status) {
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING) {
 			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", props->running ? "true" : "false");
