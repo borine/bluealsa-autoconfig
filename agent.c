@@ -50,6 +50,7 @@ struct bluealsa_pcm_data {
 	char mode[9];
 	char codec[16];
 	char transport[12];
+	char transport_type[5];
 	char service[32];
 	char alsa_id[96];
 };
@@ -70,7 +71,7 @@ struct bluealsa_agent {
 };
 
 typedef struct {
-	char string[14][256];
+	char string[16][256];
 	size_t count;
 } envvars_t;
 
@@ -124,6 +125,7 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 	memcpy(pcm_data->mode, mode, sizeof(pcm_data->mode));
 	memcpy(pcm_data->codec, pcm->codec.name, sizeof(pcm_data->codec));
 	memcpy(pcm_data->transport, transport, sizeof(pcm_data->transport));
+	memcpy(pcm_data->transport_type, transport_type, sizeof(pcm_data->transport_type));
 	memcpy(pcm_data->service, service, sizeof(pcm_data->service));
 
 	const bool show_service = (strcmp(service, "org.bluealsa.") > 0);
@@ -257,6 +259,7 @@ static size_t bluealsa_agent_init_envvars(envvars_t *envvars, const struct bluea
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_MODE=%s", pcm_data->mode);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC=%s", pcm_data->codec);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_TRANSPORT=%s", pcm_data->transport);
+	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE=%s", pcm_data->transport_type);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_SERVICE=%s", pcm_data->service);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_ALSA_ID=%s", pcm_data->alsa_id);
 	envvars->count = n;
