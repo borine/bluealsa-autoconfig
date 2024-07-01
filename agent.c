@@ -160,10 +160,9 @@ static void bluealsa_agent_run_prog(const char *prog, const char *event, const c
 	case 0:
 		{
 			char *argv[] = {(char*)prog, (char*)event, (char*)obj_path, NULL};
-			if (envp != NULL) {
-				for (size_t n = 0; n < envp->count; n++)
-					putenv(envp->string[n]);
-			}
+			for (size_t n = 0; n < envp->count; n++)
+				putenv(envp->string[n]);
+
 			execv(prog, argv);
 			error("Failed to execute %s (%s)", prog, strerror(errno));
 			exit(1);
