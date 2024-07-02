@@ -132,7 +132,7 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 		bluealsa_client_codec_blob_to_string(&pcm->codec, pcm_data->codec_config, sizeof(pcm_data->codec_config));
 	if ((format = bluealsa_client_format_to_string(pcm->format)) != NULL)
 		memcpy(pcm_data->format, format, sizeof(pcm_data->format));
-	snprintf(pcm_data->channels, sizeof(pcm_data->channels), "%u", pcm->channels);
+	snprintf(pcm_data->channels, sizeof(pcm_data->channels), "%hhu", pcm->channels);
 	snprintf(pcm_data->sampling, sizeof(pcm_data->sampling), "%u", pcm->sampling);
 	memcpy(pcm_data->transport, transport, sizeof(pcm_data->transport));
 	memcpy(pcm_data->transport_type, transport_type, sizeof(pcm_data->transport_type));
@@ -344,7 +344,7 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 		strcat(changes, "FORMAT ");
 	}
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CHANNELS) {
-		snprintf(pcm_data->channels, sizeof(pcm_data->channels), "%u", props->channels);
+		snprintf(pcm_data->channels, sizeof(pcm_data->channels), "%hhu", props->channels);
 		strcat(changes, "CHANNELS ");
 	}
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_SAMPLING) {
