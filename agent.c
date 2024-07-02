@@ -79,7 +79,7 @@ typedef struct {
 	size_t count;
 } envvars_t;
 
-static volatile bool running = true;
+static sig_atomic_t terminated = 0;
 
 static bool bluealsa_agent_filter(const struct bluealsa_agent *agent, const struct ba_pcm *pcm) {
 	const bool profile_match = (agent->profile == PROFILE_ALL) ||
@@ -397,7 +397,7 @@ static int bluealsa_agent_init_client(struct bluealsa_agent *agent) {
 
 static void bluealsa_agent_terminate(int sig) {
 	(void) sig;
-	running = false;
+	terminated = 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -518,7 +518,7 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGINT, &sigact, NULL);
 
-	while (running) {
+	while (!terminated) {
 		struct pollfd pfds[10];
 		nfds_t pfds_len = ARRAYSIZE(pfds);
 		int res;
