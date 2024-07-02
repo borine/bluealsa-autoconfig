@@ -161,10 +161,12 @@ text="dbus path: $2"
 [ "$BLUEALSA_PCM_PROPERTY_CHANNELS" ] && text="${text}\nchannels: $BLUEALSA_PCM_PROPERTY_CHANNELS"
 [ "$BLUEALSA_PCM_PROPERTY_SAMPLING" ] && text="${text}\nsampling: $BLUEALSA_PCM_PROPERTY_SAMPLING"
 [ "$BLUEALSA_PCM_PROPERTY_TRANSPORT" ] && text="${text}\ntransport: $BLUEALSA_PCM_PROPERTY_TRANSPORT"
+[ "$BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE" ] && text="${text}\ntransport type: $BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE"
 [ "$BLUEALSA_PCM_PROPERTY_SERVICE" ] && text="${text}\nservice: $BLUEALSA_PCM_PROPERTY_SERVICE"
 [ "$BLUEALSA_PCM_PROPERTY_ALSA_ID" ] && text="${text}\nALSA id: $BLUEALSA_PCM_PROPERTY_ALSA_ID"
 [ "$BLUEALSA_PCM_PROPERTY_RUNNING" ] && text="${text}\nrunning: $BLUEALSA_PCM_PROPERTY_RUNNING"
 [ "$BLUEALSA_PCM_PROPERTY_SOFTVOL" ] && text="${text}\nsoftvol: $BLUEALSA_PCM_PROPERTY_SOFTVOL"
+[ "$BLUEALSA_PCM_PROPERTY_CHANGES" ] && text="${text}\nchanges: $BLUEALSA_PCM_PROPERTY_CHANGES"
 
 exec /usr/bin/zenity --info --title="$title" --text="$text" -
 ```
@@ -190,30 +192,9 @@ or, if the build directory has already been set up, change its configuration wit
 meson configure -Ddoc=true builddir
 ```
 
-The systemd unit file for `bluealsa-autoconfig` is installed as a **system**
-unit, and the unit file for `bluealsa-agent` is installed as a **user** unit.
-For both units the default install runs the executable with no arguments. Note
-that `bluealsa-agent` fails to start if not given a command to run.
+## Usage
 
-To have `bluealsa-autoconfig` started at boot, run
-```
-sudo systemctl daemon-reload
-sudo systemctl enable --now bluealsa-autoconfig.service
-```
-
-To have `bluealsa-agent` start when a user logs in, first enable the service:
-```
-systemctl --user daemon-reload
-systemctl ---user enable bluealsa-agent.service
-```
-Then edit the local service instance to add the chosen command
-```
-systemctl --user edit bluealsa-agent.service
-```
-and finally start the service
-```
-systemctl --user start bluealsa-agent.service
-```
+The two services are documented in their respective manual pages: [bluealsa-autoconfig](./bluealsa-autoconfig.8.rst.in) and [bluealsa-agent](./bluealsa-agent.8.rst.in). `systemd` configuration is documented in [systemd integration](./systemd-integration.md).
 
 ## License
 

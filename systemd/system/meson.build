@@ -12,7 +12,7 @@ conf_data.set('bindir', bindir)
 conf_data.set('ENVIRONMENT_FILE', '')
 conf_data.set('USER', 'User=bluealsa-agent')
 conf_data.set('GROUP', 'Group=audio')
-conf_data.set('ARGS', '%E/bluealsa-agent/commands')
+conf_data.set('ARGS', '%S/bluealsa-agent/commands')
 
 agent_system_unit = configure_file(
 	input : agent_unit_template,
@@ -21,12 +21,4 @@ agent_system_unit = configure_file(
 	install: true,
 	install_dir: join_paths(unitdir, 'system'),
 )
-
-#agent_system_unit = configure_file(
-#	capture: true,
-#	command: [ '/usr/bin/sed', '-e', 's/^#User=/User=/', '-e', 's/^#Group=/Group=/', agent_user_unit ],
-#	output: 'bluealsa-agent.service',
-#	install: true,
-#	install_dir: join_paths(unitdir, 'system'),
-#)
 

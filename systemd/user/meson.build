@@ -1,10 +1,10 @@
 
 conf_data = configuration_data()
 conf_data.set('bindir', bindir)
-conf_data.set('ENVIRONMENT_FILE', 'EnvironmentFile=%E/bluealsa-agent/args.conf')
+conf_data.set('ENVIRONMENT_FILE', 'EnvironmentFile=%E/bluealsa-agent/options.conf')
 conf_data.set('USER', '')
 conf_data.set('GROUP', '')
-conf_data.set('ARGS', '$OPTIONS $COMMAND')
+conf_data.set('ARGS', '$OPTIONS %E/bluealsa-agent/commands')
 
 agent_user_unit = configure_file(
 	input : agent_unit_template,
