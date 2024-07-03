@@ -3,16 +3,11 @@ project('bluealsa-autoconfig', 'c', version: '0.4.0', license: 'MIT')
 prefix = get_option('prefix')
 assert(prefix.startswith('/'), 'Prefix is not absolute: "@0@"'.format(prefix))
 
-systemd = dependency('systemd', required: false)
-bashcompletion = dependency('bash-completion', required : false)
+bashcompletion = dependency('bash-completion', required: false)
 
 bindir = join_paths(prefix, get_option('bindir'))
 mandir = join_paths(prefix, get_option('mandir'))
 alsaconfdir = '/etc/alsa/conf.d'
-
-if systemd.found()
-	unitdir = join_paths(prefix, 'lib', 'systemd', 'system')
-endif
 
 conf_data = configuration_data()
 conf_data.set('prefix', prefix)
@@ -24,7 +19,6 @@ version_h = configure_file(output: 'version.h', configuration: version_conf)
 
 compiler = meson.get_compiler('c')
 
-#alsa_dep = dependency('alsa', version: '>= 1.2.5')
 alsa_dep = dependency('alsa')
 bluez_dep = dependency('bluez')
 dbus_dep = dependency('dbus-1')
@@ -88,9 +82,17 @@ install_data(
 	install_mode: ['rw-r--r--', 'root', 'root']
 )
 
-if systemd.found()
-	subdir('systemd')
-endif
+subdir('systemd')
+
+completionsdir = bashcompletion.get_pkgconfig_variable('completionsdir')
+install_data(
+	'completion',
+	rename: 'bluealsa-autoconfig',
+	install_dir: completionsdir,
+)
+dst = join_paths(completionsdir, 'bluealsa-agent')
+cmd = 'ln -fs @0@ $DESTDIR@1@'.format('bluealsa-autoconfig', dst)
+meson.add_install_script('sh', '-c', cmd)
 
 if get_option('doc')
     autoconf_manual_source = configure_file(
@@ -121,16 +123,4 @@ if get_option('doc')
         install: true,
         install_dir: join_paths(mandir, 'man8'),
     )
-endif
-
-if bashcompletion.found()
-    completionsdir = bashcompletion.get_pkgconfig_variable('completionsdir')
-	install_data(
-		'completion',
-		rename: 'bluealsa-autoconfig',
-		install_dir: completionsdir,
-	)
-	dst = join_paths(completionsdir, 'bluealsa-agent')
-	cmd = 'ln -fs @0@ $DESTDIR@1@'.format('bluealsa-autoconfig', dst)
-	meson.add_install_script('sh', '-c', cmd)
 endif

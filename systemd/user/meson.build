@@ -1,7 +1,7 @@
 
 conf_data = configuration_data()
 conf_data.set('bindir', bindir)
-conf_data.set('ENVIRONMENT_FILE', 'EnvironmentFile=%E/bluealsa-agent/options.conf')
+conf_data.set('ENVIRONMENT_FILE', 'EnvironmentFile=-%E/bluealsa-agent/options.conf')
 conf_data.set('USER', '')
 conf_data.set('GROUP', '')
 conf_data.set('ARGS', '$OPTIONS %E/bluealsa-agent/commands')
