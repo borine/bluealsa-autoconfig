@@ -32,7 +32,6 @@ case "$BLUEALSA_PCM_PROPERTY_MODE" in
 		exit 1
 	}
 
-	queue_backup=".bluetooth-interrupt"
 	status_file="${DATADIR}/status"
 	declare -i pos=0 ba_id=0 play_id
 	IFS=" #"
