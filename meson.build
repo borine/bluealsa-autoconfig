@@ -7,6 +7,7 @@ bashcompletion = dependency('bash-completion', required: false)
 
 bindir = join_paths(prefix, get_option('bindir'))
 mandir = join_paths(prefix, get_option('mandir'))
+docdir = join_paths(prefix, get_option('datadir'), 'doc')
 alsaconfdir = '/etc/alsa/conf.d'
 
 conf_data = configuration_data()
@@ -124,3 +125,7 @@ if get_option('doc')
         install_dir: join_paths(mandir, 'man8'),
     )
 endif
+install_subdir(
+	'examples',
+	install_dir: join_paths(docdir, 'bluealsa-agent')
+)
