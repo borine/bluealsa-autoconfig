@@ -13,6 +13,8 @@ tool `zenity` to create the notification. To try this example, either copy (or s
 
 This example demonstrates the use of `bluealsa-agent` to invoke the client of a client-server application, in this case [MPD](https://www.musicpd.org) and its command-line client `mpc`. As for the previous example, it consists of a single file (this time a `bash` script [52-mpd.bash](./52-mpd.bash)) which must be made executable and be added to the `bluealsa-agent` commands. The script operates only for A2DP streams and ignores HFP and HSP devices.
 
+#### MPD output
+
 For use with Bluetooth headphones or speakers, it is necessary to have at least 2 ALSA output devices defined in the `mpd.conf` configuration file, one for local soundcard playback and the other for Bluetooth playback. The script assumes that MPD Output 1 is the soundcard, and MPD Output 2 is the Bluetooth output. Edit the values of `CARD_OUTPUT` and `BLUETOOTH_OUTPUT` at the top of the script if you require to use different output numbers. Example `mpd.conf` entries:
 
 ```mpd
@@ -27,22 +29,30 @@ audio_output {
 	name "Bluetooth"
 	type "alsa"
 	device "bluealsa:PROFILE=a2dp"
-	mixer_type "software"
+	mixer_type "hardware"
+	mixer_device "bluealsa:DEV=00:00:00:00:00:00,DYN=no
 	enabled "no"
 }
 ```
 
-The `bluealsa` output mixer_type is set to "software" because MPD is not fully compatible with removable ALSA devices and in particular the use of "hardware" mixer_type here can cause MPD to trigger an abort in libasound. This output is also initially "disabled" so that it is only used when a bluetooth device is actually connected.
+The `bluealsa` output mixer_device is set to single client mode with dynamic operaton disabled because MPD is not fully compatible with removable ALSA devices and otherwise MPD may trigger an abort in libasound. Alternatively, use `mixer_type "software". This output is also initially "disabled" so that it is only used when a bluetooth device is actually connected.
 
 When a bluetooth speaker or headphones connects the A2DP profile, the script pauses playback,enables the "Bluetooth" output and disables the "Default" output, then resumes playback if MPD was already playing when the connection occurred.
 
 When a Bluetooth output device disconnects then MPD pauses playback immediately, before the agent script is invoked. So the script cannot tell if playback was already paused before the disconnection and therefore does not automatically resume playback after enabling the "Default" output and disabling the "Bluetooth" device. The user must manually resume using any MPD client (e.g. `mpc play`).
 
-This example agent script also enables the use of `MPD` as a player for A2DP streams from a connected mobile phone. This feature requires BlueALSA buit with HWCOMPAT support, and MPD built from the latest sources (https://github.com/MusicPlayerDaemon/MPD) as the ALSA input plugin in MPD releases v0.23.15 and earlier does not work well with non-hardware devices. [The important commit for BlueALSA capture support is [4947bb1](https://github.com/MusicPlayerDaemon/MPD/commit/4947bb113d26045f5fa0e5800db73acd75500109)]. To use this feature it is necessary to run `bluealsa-agent` with status change events enabled (`bluealsa-agent --status`).
+#### MPD input
+
+This example agent script also enables the use of `MPD` as a player for A2DP streams from a connected mobile phone (or computer). This feature requires MPD built from the latest sources (https://github.com/MusicPlayerDaemon/MPD). The ALSA input plugin in MPD releases v0.23.15 and earlier does not work well with non-hardware devices. [The important commit for BlueALSA capture support is [90dfa43](https://github.com/MusicPlayerDaemon/MPD/commit/90dfa437e024a0967557e31ccc4ff452a15cf691)]. To use this feature it is necessary to run `bluealsa-agent` with status change events enabled (`bluealsa-agent --status`).
 
 When an A2DP input stream is **started** (i.e., not when the 'phone connects, only when it begins audio playback) the agent script pauses `mpd`, inserts the A2DP stream into the playqueue, and starts playback of the stream.
 
 When the A2DP stream is stopped the agent script removes the A2DP stream from the queue and resumes playback of the queue from where it was paused.
+
+If netcat (`nc`) is installed then the script also sets the title for the stream in MPD to "Bluetooth Input Stream"; otherwise no title is set and MPD clients display the stream URI instead (`mpc` is unable to set the title of a stream). For this to work the script needs to know the location of the MPD local socket: edit the value of `MPD_SOCKET` at the top of the script to change this if necessary.
+
+> [!Note]
+> MPD (by design) introduces a latency of approximately 3 seconds, and there is no way to report this delay back to the phone; so the phone will not be able to synchronize the audio with video.
 
 ## Long-Running Service
 
