@@ -1,8 +1,0 @@
-[Unit]
-Description=Bluetooth Handsfree Audio Service %I
-
-[Service]
-Type=simple
-Environment=ARGS=%I
-ExecStart=/usr/local/bin/handsfree.bash $ARGS
-

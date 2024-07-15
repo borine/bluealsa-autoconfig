@@ -167,6 +167,7 @@ text="dbus path: $2"
 [ "$BLUEALSA_PCM_PROPERTY_RUNNING" ] && text="${text}\nrunning: $BLUEALSA_PCM_PROPERTY_RUNNING"
 [ "$BLUEALSA_PCM_PROPERTY_SOFTVOL" ] && text="${text}\nsoftvol: $BLUEALSA_PCM_PROPERTY_SOFTVOL"
 [ "$BLUEALSA_PCM_PROPERTY_CHANGES" ] && text="${text}\nchanges: $BLUEALSA_PCM_PROPERTY_CHANGES"
+[ "$BLUEALSA_AGENT_SYSTEMD" ] && text="${text}\nsystemd session: $BLUEALSA_AGENT_SYSTEMD"
 
 exec /usr/bin/zenity --info --title="$title" --text="$text" -
 ```

@@ -15,6 +15,11 @@ This service is designed to be run by an unprivileged user account so that the r
 
 This project includes `systemd` service unit files for both a `system` service and a `user` service. The files include security lockdown directives; however as the functionality of the agent scripts is unknown, the security sandbox is a compromise permitting the "most likely" functions. It may be necessary to relax some of the directives for certain use cases; in which case please consult the [systemd documentation](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html).
 
+In case a command needs to know if it is running in a systemd system session or a systemd user session, the unit files set an environment variable:
+
+system session: BLUEALSA_AGENT_SYSTEMD=SYSTEM
+user session: BLUEALSA_AGENT_SYSTEMD=USER
+
 ### Running in the session of a logged-in user
 
 This is the simplest case. To use this method:
@@ -24,7 +29,7 @@ This is the simplest case. To use this method:
 1. create the file `~/.config/bluealsa-agent/options.conf` defining the environment variable `OPTIONS`, which sets the command-line options for `bluealsa-agent`, for example:
 
     ```
-    OPTIONS="--status --profile=A2DP"
+    OPTIONS="--status --profile=a2dp"
     ```
 
    _[Note] Alternatively, change the service settings using `systemctl --user edit bluealsa-agent.service`. That way you can also change the commands directory path._

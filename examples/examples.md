@@ -64,9 +64,9 @@ Both the agent script examples assume that the service script is installed as `/
 
 It is possible to launch the service executable directly from an agent script so long as the service is moved to a different process session so that the agent is not blocked while the service is running, for example by using `setsid(1)`. In order to be able to later stop the service it is necessary to write its process ID (pid) to a file so that a later invocation of the agent knows which process to kill.
 
-To try this example, add the agent script [53-handsfree.bash](./handsfree/53-handsfree.bash) to the `bluealsa-agent` commands.
+To try this example, add the agent script [53-handsfree.bash](./handsfree/53-handsfree.bash) to the `bluealsa-agent` commands, then re-start the `bluealsa-agent` service.
 
 ### 54 Handsfree (Via Systemd)
 
-This example uses `systemd` to manage the `handfree.bash` service. This is preferable to the direct control method as it is more robust and is the recommended approach for all long-running service management. To use this example, first remove the above example `53-handsfree.bash` from the `bluealsa-agent` commands if you have installed it. Copy the systemd service template file [hf-hs@.service](./handsfree/hf-hs@.service) to the directory /usr/local/lib/systemd/user (create that path if necessary) then inform the user `systemd` instance of the change `systemctl --user daemon-reload`. Do not `enable` the service, it is to be started only explicitly by the agent script. Now add the agent script [54-handsfree.bash](./handsfree/54-handsfree.bash) to the `bluealsa-agent` commands.
+This example uses `systemd` to manage the `handfree.bash` service. This is preferable to the direct control method as it is more robust and is the recommended approach for all long-running service management. To use this example, first remove the above example `53-handsfree.bash` from the `bluealsa-agent` commands if you have installed it, add the agent script [54-handsfree.bash](./handsfree/54-handsfree.bash) to the `bluealsa-agent` commands, then re-start the `bluealsa-agent` service.
 

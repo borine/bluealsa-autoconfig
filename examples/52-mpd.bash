@@ -3,10 +3,12 @@
 CARD_OUTPUT=1
 BLUETOOTH_OUTPUT=2
 
-MPD_SOCKET="/run/mpd/socket"
-#MPD_SOCKET="/run/user/$(id --user)/mpd/socket"
-
 [[ "$BLUEALSA_PCM_PROPERTY_PROFILE" == "A2DP" ]] || exit
+
+case "$BLUEALSA_AGENT_SYSTEMD" in
+	"SYSTEM") MPD_SOCKET="/run/mpd/socket" ;;
+	"USER")   MPD_SOCKET="/run/user/$(id --user)/mpd/socket" ;;
+esac
 
 DATADIR="/tmp/bluealsa-agent/52-mpd"
 
@@ -72,14 +74,17 @@ case "$BLUEALSA_PCM_PROPERTY_MODE" in
 		[[ -r "$status_file" ]] || exit
 		read ba_id old_state old_pos old_time <"$status_file"
 		rm "$status_file"
+		mpc -q stop
 		if [[ $play_id == $ba_id ]] ; then
 			mpc -q del "$pos"
-			mpc -q play "$old_pos"
-			if [[ "$old_state" == "stopped" ]] ; then
-				mpc -q stop
-			else
-				[[ "$old_state" == "paused" ]] && mpc -q pause
-				[[ "$old_time" ]] && mpc -q seek "$old_time"
+			if [[ "$old_pos" != 0 ]] ; then
+				mpc -q play "$old_pos"
+				if [[ "$old_state" == "stopped" ]] ; then
+					mpc -q stop
+				else
+					[[ "$old_state" == "paused" ]] && mpc -q pause
+					[[ "$old_time" ]] && mpc -q seek "$old_time"
+				fi
 			fi
 		else
 			while read -r pos id; do

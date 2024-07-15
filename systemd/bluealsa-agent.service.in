@@ -5,6 +5,7 @@ After=dbus.service
 
 [Service]
 Type=simple
+Environment=BLUEALSA_AGENT_SYSTEMD=@systemd_session@
 @ENVIRONMENT_FILE@
 ExecStart=@bindir@/bluealsa-agent @ARGS@
 @USER@

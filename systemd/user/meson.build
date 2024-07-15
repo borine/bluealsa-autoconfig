@@ -1,6 +1,7 @@
 
 conf_data = configuration_data()
 conf_data.set('bindir', bindir)
+conf_data.set('systemd_session', 'USER')
 conf_data.set('ENVIRONMENT_FILE', 'EnvironmentFile=-%E/bluealsa-agent/options.conf')
 conf_data.set('USER', '')
 conf_data.set('GROUP', '')
