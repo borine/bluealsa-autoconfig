@@ -17,8 +17,8 @@ This project includes `systemd` service unit files for both a `system` service a
 
 In case a command needs to know if it is running in a systemd system session or a systemd user session, the unit files set an environment variable:
 
-system session: BLUEALSA_AGENT_SYSTEMD=SYSTEM
-user session: BLUEALSA_AGENT_SYSTEMD=USER
+- system session: `BLUEALSA_AGENT_SYSTEMD=SYSTEM`
+- user session: `BLUEALSA_AGENT_SYSTEMD=USER`
 
 ### Running in the session of a logged-in user
 
