@@ -10,19 +10,15 @@ Environment=BLUEALSA_AGENT_SYSTEMD=@systemd_session@
 ExecStart=@bindir@/bluealsa-agent @ARGS@
 @USER@
 @GROUP@
-CapabilityBoundingSet=
+@SYSTEM_DIRECTIVES@
 LockPersonality=true
 MemoryDenyWriteExecute=true
 NoNewPrivileges=true
 PrivateMounts=true
 PrivateTmp=true
 PrivateUsers=true
-ProtectClock=true
-ProtectKernelLogs=true
 ProtectControlGroups=true
 ProtectHome=read-only
-ProtectHostname=true
-ProtectKernelModules=true
 ProtectKernelTunables=true
 ProtectProc=invisible
 ProtectSystem=full
