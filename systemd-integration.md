@@ -29,7 +29,7 @@ This is the simplest case. To use this method:
 1. create the file `~/.config/bluealsa-agent/options.conf` defining the environment variable `OPTIONS`, which sets the command-line options for `bluealsa-agent`, for example:
 
     ```
-    OPTIONS="--status --profile=a2dp"
+    OPTIONS="--status=Running,Delay --profile=a2dp"
     ```
 
    _[Note] Alternatively, change the service settings using `systemctl --user edit bluealsa-agent.service`. That way you can also change the commands directory path._

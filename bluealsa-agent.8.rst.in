@@ -52,9 +52,11 @@ OPTIONS
     Invoke commands only for PCMs having mode *MODE*. *MODE* may be "sink" or
     "source". The default is to invoke commands for both modes.
 
--s, --status
-	Invoke the *COMMAND* also when the PCM "Running" or "$oftvol" status
-	changes. See COMMAND_ below.
+-s, --status[=PROPLIST]
+	Invoke the *COMMAND* also when the status of the given PCM properties
+	changes. *PROPLIST* is a comma-separated list of property names. Permissible
+	names are "Running", "SoftVolume" and "Delay". If *PROPLIST* is not given
+	then only changes to the "Running" state are active. See COMMAND_ below.
 
 COMMAND
 =======
@@ -135,8 +137,8 @@ These variables are set for all events:
   ``BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE``
     The Bluetooth transport type, either ``A2DP`` or ``SCO``.
 
-When *--status* is used, then two addtional environment variables are also set
-for the "added" and "update" events:
+When *--status* is used, then additional environment variables are also set
+for the "added" and "update" events as determined by the *PROPLIST*:
  
   ``BLUEALSA_PCM_PROPERTY_RUNNING``
     ``true`` if the PCM is running (i.e. when the underlying Bluetooth transport
@@ -145,6 +147,9 @@ for the "added" and "update" events:
   ``BLUEALSA_PCM_PROPERTY_SOFTVOL``
     ``true`` when the BlueALSA "SoftVolume" property is enabled for this PCM.
     See ``bluealsa(8)`` for more information.
+
+  ``BLUEALSA_PCM_PROPERTY_DELAY``
+    The current delay, in units of 1/10 millisecond.
 
 To identify which properties have changed in an "update" event, one other
 environment variable is set:
@@ -158,6 +163,8 @@ environment variable is set:
       CODEC
 
       CODEC_CONFIG
+
+      DELAY
 
       FORMAT
 

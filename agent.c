@@ -42,6 +42,18 @@ enum bluealsa_mode {
 	MODE_SOURCE = BA_PCM_MODE_SOURCE,
 };
 
+enum {
+	PROPERTY_DELAY   = 1 << 0,
+	PROPERTY_RUNNING = 1 << 1,
+	PROPERTY_SOFTVOL = 1 << 2,
+};
+
+static const char *bluealsa_properties[] = {
+	"Delay",
+	"Running",
+	"SoftVolume",
+};
+
 struct bluealsa_pcm_data {
 	char path[128];
 	char address[18];
@@ -63,9 +75,9 @@ struct bluealsa_agent {
 	bluealsa_client_t client;
 	char **progs;
 	size_t prog_count;
-	bool with_status;
 	enum bluealsa_profile profile;
 	enum bluealsa_mode mode;
+	uint8_t properties;
 	struct {
 		struct bluealsa_pcm_data *data;
 		size_t capacity;
@@ -296,10 +308,12 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
 
-	if (agent->with_status) {
+	if (agent->properties & PROPERTY_DELAY)
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", pcm->delay);
+	if (agent->properties & PROPERTY_RUNNING)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", pcm->running ? "true" : "false");
+	if (agent->properties & PROPERTY_SOFTVOL)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", pcm->soft_volume ? "true" : "false");
-	}
 
 	envvars.count = n;
 
@@ -329,7 +343,7 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	char changes[64] = {0};
 	struct bluealsa_pcm_data *pcm_data;
 
-	if ((props->mask & ~(BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME | BLUEALSA_PCM_PROPERTY_CHANGED_DELAY)) == 0)
+	if ((props->mask & ~(BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME)) == 0)
 		return;
 
 	if ((pcm_data = bluealsa_agent_find_pcm_data(agent, path)) == NULL)
@@ -359,16 +373,22 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
 
-	if (agent->with_status) {
+	if (agent->properties & PROPERTY_DELAY)
+		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_DELAY) {
+			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", props->delay);
+			strcat(changes, "DELAY ");
+		}
+	if (agent->properties & PROPERTY_RUNNING)
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING) {
 			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", props->running ? "true" : "false");
 			strcat(changes, "RUNNING ");
 		}
+	if (agent->properties & PROPERTY_SOFTVOL)
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_SOFTVOL) {
 			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", props->softvolume ? "true" : "false");
 			strcat(changes, "SOFTVOL ");
 		}
-	}
+
 	if (strlen(changes) > 0) {
 		changes[strlen(changes) - 1] = '\0';
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANGES=%s", changes);
@@ -410,14 +430,14 @@ int main(int argc, char *argv[]) {
 	const char *programs = NULL;
 
 	int opt;
-	const char *opts = "hVp:m:B:s";
+	const char *opts = "hVp:m:B:s::";
 	const struct option longopts[] = {
 		{ "help", no_argument, NULL, 'h' },
 		{ "version", no_argument, NULL, 'V' },
 		{ "profile", required_argument, NULL, 'p' },
 		{ "mode", required_argument, NULL, 'm' },
 		{ "dbus", required_argument, NULL, 'B'},
-		{ "status", no_argument, NULL, 's' },
+		{ "status", optional_argument, NULL, 's' },
 		{ 0, 0, 0, 0 },
 	};
 
@@ -433,7 +453,7 @@ int main(int argc, char *argv[]) {
 					"  -p, --profile=[a2dp|sco]\tselect only given profile\n"
 					"  -m, --mode=[sink|source]\tselect only given mode\n"
 					"  -B, --dbus=NAME\t\tBlueALSA service name suffix\n"
-					"  -s, --status\t\t\thandle status change events\n"
+					"  -s, --status[=PROPLIST]\t\thandle status change events\n"
 					"\nPROGRAM:\n"
 					"  path to program, or directory of programs, to be run "
 					"when BlueALSA event occurs\n",
@@ -475,9 +495,30 @@ int main(int argc, char *argv[]) {
 			services[services_count++] = strdup(service);
 			break;
 		}
-		case 's' /* --status */ :
-			agent.with_status = true;
+
+		case 's' /* --status[=PROPLIST] */ : {
+			if (optarg == NULL)
+				optarg = "Running";
+
+			for (char *prop = strtok(optarg, ","); prop; prop = strtok(NULL, ",")) {
+
+				bool found = false;
+				for (size_t i = 0; i < ARRAYSIZE(bluealsa_properties); i++) {
+					if (strcasecmp(prop, bluealsa_properties[i]) == 0) {
+						agent.properties |= (1 << i);
+						found = true;
+						break;
+					}
+				}
+
+				if (!found) {
+					fprintf(stderr, "Unknown property '%s'\n", prop);
+					return false;
+				}
+
+			}
 			break;
+		}
 
 		default:
 			fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
