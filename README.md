@@ -123,11 +123,11 @@ response to BlueALSA PCM D-Bus signals. It does not require `root` privileges
 and is intended to be used as a user service.
 
 For a trivial example, suppose it is required to display a desktop info pop-up
-whenever a BlueALSA PCM is added or removed; one could install the following
-shell script as `/usr/local/bin/bluealsa-notify` and then run the
-`bluealsa-agent` service as
+whenever a BlueALSA PCM is added or removed; one could save the following
+shell script as `~/bluealsa-notify` and then run `bluealsa-agent` in the display
+session as
 ```
-bluealsa-agent /usr/local/bin/bluealsa-notify
+bluealsa-agent ~/bluealsa-notify
 ```
 
 ```
@@ -136,16 +136,14 @@ bluealsa-agent /usr/local/bin/bluealsa-notify
 title="BlueALSA PCM"
 case "$1" in
 	"add")
-		title="$title added"
+		title="$title Added"
 		;;
 	"remove")
-		title="$title removed"
-		;;
-	"update")
-		title="$title updated"
+		title="$title Removed"
 		;;
 	*)
 		exit 0
+		;;
 esac
 
 text="dbus path: $2"
@@ -169,11 +167,12 @@ text="dbus path: $2"
 [ "$BLUEALSA_PCM_PROPERTY_CHANGES" ] && text="${text}\nchanges: $BLUEALSA_PCM_PROPERTY_CHANGES"
 [ "$BLUEALSA_AGENT_SYSTEMD" ] && text="${text}\nsystemd session: $BLUEALSA_AGENT_SYSTEMD"
 
-exec /usr/bin/zenity --info --title="$title" --text="$text" -
+exec /usr/bin/zenity --info --title="$title" --text="$text"
 ```
 See the [manual page](./bluealsa-agent.8.rst.in) for full details.
 
-Some more practical example scripts are included in the [examples directory](./examples/examples.md)
+Some more practical example scripts are included in the
+[examples directory](./examples/examples.md)
 
 ## Installation
 
@@ -184,21 +183,34 @@ meson compile
 sudo meson install
 ```
 
-To include the manual pages, the application `rst2man` from the `docutils` project is required. Many distributions provide this in the package `python3-docutils`. To enable building and installing the manual page, setup the build directory with
+To include the manual pages, the application `rst2man` from the `docutils`
+project is required. Many distributions provide this in the package
+`python3-docutils`. To enable building and installing the manual page, setup the
+build directory with
 ```
 meson setup -Ddoc=true builddir
 ```
-or, if the build directory has already been set up, change its configuration with
+or, if the build directory has already been set up, change its configuration
+with
 ```
 meson configure -Ddoc=true builddir
 ```
 
 ## Usage
 
-The two services are documented in their respective manual pages: [bluealsa-autoconfig](./bluealsa-autoconfig.8.rst.in) and [bluealsa-agent](./bluealsa-agent.8.rst.in). `systemd` configuration is documented in [systemd integration](./systemd-integration.md).
+The two services are documented in their respective manual pages:
+
+* [bluealsa-autoconfig](./bluealsa-autoconfig.8.rst.in) and
+* [bluealsa-agent](./bluealsa-agent.8.rst.in).
+
+`systemd` configuration is documented in:
+
+* [systemd integration](./systemd-integration.md).
 
 ## License
 
 This project is licensed under the terms of the MIT license.
 
-It includes copies of source code files from the bluez-alsa project, which are also licensed under the MIT license and all rights to those files remain with their original author.
+It includes copies of source code files from the bluez-alsa project, which are
+also licensed under the MIT license and all rights to those files remain with
+their original author.
