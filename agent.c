@@ -176,12 +176,14 @@ static struct bluealsa_pcm_data *bluealsa_agent_find_pcm_data(struct bluealsa_ag
 	return NULL;
 }
 
-static void bluealsa_agent_run_prog(const char *prog, const char *event, const char *obj_path, envvars_t *envp, bool wait) {
+static void bluealsa_agent_run_prog(struct bluealsa_agent *agent, size_t prog_num, const char *event, const char *obj_path, envvars_t *envp, bool wait) {
+	const char *prog = agent->progs[prog_num];
 	pid_t pid = fork();
 	switch (pid) {
 	case 0:
 		{
 			char *argv[] = {(char*)prog, (char*)event, (char*)obj_path, NULL};
+			bluealsa_client_close(agent->client);
 			for (size_t n = 0; n < envp->count; n++)
 				putenv(envp->string[n]);
 
@@ -203,7 +205,7 @@ static void bluealsa_agent_run_prog(const char *prog, const char *event, const c
 
 static void bluealsa_agent_run_progs(struct bluealsa_agent *agent, const char *event, const char *obj_path, envvars_t *envp) {
 	for (size_t n = 0; n < agent->prog_count; n++) {
-		bluealsa_agent_run_prog(agent->progs[n], event, obj_path, envp, agent->wait);
+		bluealsa_agent_run_prog(agent, n, event, obj_path, envp, agent->wait);
 	}
 }
 
