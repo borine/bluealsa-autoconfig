@@ -8,6 +8,7 @@ Type=simple
 Environment=BLUEALSA_AGENT_SYSTEMD=@systemd_session@
 @ENVIRONMENT_FILE@
 ExecStart=@bindir@/bluealsa-agent @ARGS@
+ExecReload=/bin/kill -HUP $MAINPID
 @USER@
 @GROUP@
 @SYSTEM_DIRECTIVES@

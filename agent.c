@@ -10,21 +10,21 @@
 # include <config.h>
 #endif
 
+#include <dirent.h>
 #include <errno.h>
 #include <getopt.h>
+#include <limits.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-
-#include <limits.h>
-#include <sys/types.h>
+#include <sys/signalfd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
-#include <dirent.h>
+#include <unistd.h>
 
 #include "bluealsa-client.h"
 #include "bluez-alsa/shared/log.h"
@@ -73,6 +73,8 @@ struct bluealsa_pcm_data {
 
 struct bluealsa_agent {
 	bluealsa_client_t client;
+	const char *program;
+	bool program_is_dir;
 	char **progs;
 	size_t prog_count;
 	enum bluealsa_profile profile;
@@ -91,17 +93,17 @@ typedef struct {
 	size_t count;
 } envvars_t;
 
+static struct bluealsa_agent agent = { 0 };
 static sig_atomic_t terminated = 0;
 
-static bool bluealsa_agent_filter(const struct bluealsa_agent *agent, const struct ba_pcm *pcm) {
-	const bool profile_match = (agent->profile == PROFILE_ALL) ||
-									(agent->profile & pcm->transport);
-	const bool mode_match = (agent->mode == MODE_ALL) || (pcm->mode == agent->mode);
+static bool bluealsa_agent_filter(const struct ba_pcm *pcm) {
+	const bool profile_match = (agent.profile == PROFILE_ALL) ||
+									(agent.profile & pcm->transport);
+	const bool mode_match = (agent.mode == MODE_ALL) || (pcm->mode == agent.mode);
  	return profile_match && mode_match;
 }
 
 static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
-				struct bluealsa_agent *agent,
 				const struct ba_pcm *pcm,
 				const char *service) {
 
@@ -121,18 +123,18 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 	if ((transport_type = bluealsa_client_transport_to_type(pcm->transport)) == NULL)
 		return NULL;
 
-	if (agent->pcms.count == agent->pcms.capacity) {
-		const size_t new_size = 2 * agent->pcms.capacity;
-		pcm_data = realloc(agent->pcms.data, new_size * sizeof(*agent->pcms.data));
+	if (agent.pcms.count == agent.pcms.capacity) {
+		const size_t new_size = 2 * agent.pcms.capacity;
+		pcm_data = realloc(agent.pcms.data, new_size * sizeof(*agent.pcms.data));
 		if (pcm_data == NULL)
 			return NULL;
 
-		agent->pcms.data = pcm_data;
-		agent->pcms.capacity = new_size;
+		agent.pcms.data = pcm_data;
+		agent.pcms.capacity = new_size;
 	}
-	pcm_data = &agent->pcms.data[agent->pcms.count];
+	pcm_data = &agent.pcms.data[agent.pcms.count];
 
-	bluealsa_client_get_device(agent->client, &device);
+	bluealsa_client_get_device(agent.client, &device);
 
 	memcpy(pcm_data->path, pcm->pcm_path, sizeof(pcm_data->path));
 	memcpy(pcm_data->address, device.hex_addr, sizeof(pcm_data->address));
@@ -153,40 +155,45 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 	const bool show_service = (strcmp(service, "org.bluealsa.") > 0);
 	snprintf(pcm_data->alsa_id, sizeof(pcm_data->alsa_id), "bluealsa:DEV=%s,PROFILE=%s%s%s", pcm_data->address, transport_type, show_service ? ",SRV=" : "", show_service ? service + strlen("org.bluealsa.") : "");
 
-	agent->pcms.count++;
+	agent.pcms.count++;
 	return pcm_data;
 }
 
-static bool bluealsa_agent_remove_pcm_path(struct bluealsa_agent *agent, const char *path) {
-	for (size_t n = 0; n < agent->pcms.count; n++) {
-		if (strcmp(path, agent->pcms.data[n].path) == 0) {
-			if (--agent->pcms.count > 0)
-				memcpy(&agent->pcms.data[n], &agent->pcms.data[agent->pcms.count], sizeof(*agent->pcms.data));
+static bool bluealsa_agent_remove_pcm_path(const char *path) {
+	for (size_t n = 0; n < agent.pcms.count; n++) {
+		if (strcmp(path, agent.pcms.data[n].path) == 0) {
+			if (--agent.pcms.count > 0)
+				memcpy(&agent.pcms.data[n], &agent.pcms.data[agent.pcms.count], sizeof(*agent.pcms.data));
 			return true;
 		}
 	}
 	return false;
 }
 
-static struct bluealsa_pcm_data *bluealsa_agent_find_pcm_data(struct bluealsa_agent *agent, const char *path) {
-	for (size_t n = 0; n < agent->pcms.count; n++) {
-		if (strcmp(path, agent->pcms.data[n].path) == 0)
-			return &agent->pcms.data[n];
+static struct bluealsa_pcm_data *bluealsa_agent_find_pcm_data(const char *path) {
+	for (size_t n = 0; n < agent.pcms.count; n++) {
+		if (strcmp(path, agent.pcms.data[n].path) == 0)
+			return &agent.pcms.data[n];
 	}
 	return NULL;
 }
 
-static void bluealsa_agent_run_prog(struct bluealsa_agent *agent, size_t prog_num, const char *event, const char *obj_path, envvars_t *envp, bool wait) {
-	const char *prog = agent->progs[prog_num];
+static void bluealsa_agent_run_prog(size_t prog_num, const char *event, const char *obj_path, envvars_t *envp, bool wait) {
+	const char *prog = agent.progs[prog_num];
 	pid_t pid = fork();
 	switch (pid) {
 	case 0:
 		{
 			char *argv[] = {(char*)prog, (char*)event, (char*)obj_path, NULL};
-			bluealsa_client_close(agent->client);
+			bluealsa_client_close(agent.client);
 			for (size_t n = 0; n < envp->count; n++)
 				putenv(envp->string[n]);
 
+			sigset_t mask;
+			sigemptyset(&mask);
+			sigaddset(&mask, SIGHUP);
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+			
 			execv(prog, argv);
 			error("Failed to execute %s (%s)", prog, strerror(errno));
 			exit(1);
@@ -203,9 +210,9 @@ static void bluealsa_agent_run_prog(struct bluealsa_agent *agent, size_t prog_nu
 	}
 }
 
-static void bluealsa_agent_run_progs(struct bluealsa_agent *agent, const char *event, const char *obj_path, envvars_t *envp) {
-	for (size_t n = 0; n < agent->prog_count; n++) {
-		bluealsa_agent_run_prog(agent, n, event, obj_path, envp, agent->wait);
+static void bluealsa_agent_run_progs(const char *event, const char *obj_path, envvars_t *envp) {
+	for (size_t n = 0; n < agent.prog_count; n++) {
+		bluealsa_agent_run_prog(n, event, obj_path, envp, agent.wait);
 	}
 }
 
@@ -213,7 +220,7 @@ static int cmpstringp(const void *p1, const void *p2) {
 	return strcmp(*(const char **) p1, *(const char **) p2);
 }
 
-static void bluealsa_agent_get_progs(struct bluealsa_agent *agent, const char *program) {
+static void bluealsa_agent_get_progs(const char *program) {
 	struct stat statbuf;
 	DIR *dir;
 	struct dirent *entry;
@@ -226,13 +233,16 @@ static void bluealsa_agent_get_progs(struct bluealsa_agent *agent, const char *p
 		exit(EXIT_FAILURE);
 	}
 
+	agent.program = program;
+	
 	if (S_ISDIR(statbuf.st_mode)) {
 		if ((dir = opendir(program)) == NULL) {
 			error("Cannot read directory '%s' (%s)", program, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 
-		agent->progs = malloc(capacity * sizeof(char*));
+		agent.program_is_dir = true;
+		agent.progs = malloc(capacity * sizeof(char*));
 		strcpy(path, program);
 		strcat(path, "/");
 
@@ -242,31 +252,31 @@ static void bluealsa_agent_get_progs(struct bluealsa_agent *agent, const char *p
 			if (strlen(entry->d_name) + offset > PATH_MAX)
 				continue;
 			strcpy(path + offset, entry->d_name);
-			if (agent->prog_count >= capacity) {
+			if (agent.prog_count >= capacity) {
 				capacity *= 2;
-				agent->progs = realloc(agent->progs, capacity * sizeof(char*));
-				if (agent->progs == NULL) {
+				agent.progs = realloc(agent.progs, capacity * sizeof(char*));
+				if (agent.progs == NULL) {
 					error("Out of memory");
 					exit(EXIT_FAILURE);
 				}
 			}
-			agent->progs[agent->prog_count] = strdup(path);
-			if (agent->progs[agent->prog_count] == NULL) {
+			agent.progs[agent.prog_count] = strdup(path);
+			if (agent.progs[agent.prog_count] == NULL) {
 				error("Out of memory");
 				exit(EXIT_FAILURE);
 			}
-			++agent->prog_count;
+			++agent.prog_count;
 		}
 		closedir(dir);
 
-		qsort(agent->progs, agent->prog_count, sizeof(char *), cmpstringp);
-		agent->wait = true;
+		qsort(agent.progs, agent.prog_count, sizeof(char *), cmpstringp);
+		agent.wait = true;
 	}
 	else if (S_ISREG(statbuf.st_mode)) {
-		agent->progs = malloc(sizeof(char*));
-		agent->progs[0] = strdup(program);
-		agent->prog_count = 1;
-		agent->wait = false;
+		agent.progs = malloc(sizeof(char*));
+		agent.progs[0] = strdup(program);
+		agent.prog_count = 1;
+		agent.wait = false;
 	}
 	else {
 		error("Invalid file type for program '%s'", program);
@@ -295,51 +305,50 @@ static size_t bluealsa_agent_init_envvars(envvars_t *envvars, const struct bluea
 
 static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *service, void *data) {
 	(void) data;
-	struct bluealsa_agent *agent = data;
 	struct bluealsa_pcm_data *pcm_data;
 	envvars_t envvars;
 	size_t n;
 
-	if (!bluealsa_agent_filter(agent, pcm))
+	if (!bluealsa_agent_filter(pcm))
 		return;
 
-	if ((pcm_data = bluealsa_agent_add_pcm_path(agent, pcm, service)) == NULL) {
+	if ((pcm_data = bluealsa_agent_add_pcm_path(pcm, service)) == NULL) {
 		error("Out of memory");
 		return;
 	}
 
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
 
-	if (agent->properties & PROPERTY_DELAY)
+	if (agent.properties & PROPERTY_DELAY)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", pcm->delay);
-	if (agent->properties & PROPERTY_RUNNING)
+	if (agent.properties & PROPERTY_RUNNING)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", pcm->running ? "true" : "false");
-	if (agent->properties & PROPERTY_SOFTVOL)
+	if (agent.properties & PROPERTY_SOFTVOL)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", pcm->soft_volume ? "true" : "false");
 
 	envvars.count = n;
 
-	bluealsa_agent_run_progs(agent, "add", pcm->pcm_path, &envvars);
+	bluealsa_agent_run_progs("add", pcm->pcm_path, &envvars);
 
 }
 
 static void bluealsa_agent_pcm_removed(const char *path, void *data) {
-	struct bluealsa_agent *agent = data;
+	(void) data;
 	const struct bluealsa_pcm_data *pcm_data;
 	envvars_t envvars;
 
-	if ((pcm_data = bluealsa_agent_find_pcm_data(agent, path)) == NULL)
+	if ((pcm_data = bluealsa_agent_find_pcm_data(path)) == NULL)
 		return;
 
 	bluealsa_agent_init_envvars(&envvars, pcm_data);
 
-	if (bluealsa_agent_remove_pcm_path(agent, path))
-		bluealsa_agent_run_progs(agent, "remove", path, &envvars);
+	if (bluealsa_agent_remove_pcm_path(path))
+		bluealsa_agent_run_progs("remove", path, &envvars);
 }
 
 static void bluealsa_agent_pcm_updated(const char *path, const char *service, struct bluealsa_pcm_properties *props, void *data) {
 	(void) service;
-	struct bluealsa_agent *agent = data;
+	(void) data;
 	envvars_t envvars;
 	size_t n;
 	char changes[64] = {0};
@@ -348,7 +357,7 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	if ((props->mask & ~(BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME)) == 0)
 		return;
 
-	if ((pcm_data = bluealsa_agent_find_pcm_data(agent, path)) == NULL)
+	if ((pcm_data = bluealsa_agent_find_pcm_data(path)) == NULL)
 		return;
 
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC) {
@@ -375,17 +384,17 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
 
-	if (agent->properties & PROPERTY_DELAY)
+	if (agent.properties & PROPERTY_DELAY)
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_DELAY) {
 			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", props->delay);
 			strcat(changes, "DELAY ");
 		}
-	if (agent->properties & PROPERTY_RUNNING)
+	if (agent.properties & PROPERTY_RUNNING)
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING) {
 			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", props->running ? "true" : "false");
 			strcat(changes, "RUNNING ");
 		}
-	if (agent->properties & PROPERTY_SOFTVOL)
+	if (agent.properties & PROPERTY_SOFTVOL)
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_SOFTVOL) {
 			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_SOFTVOL=%s", props->softvolume ? "true" : "false");
 			strcat(changes, "SOFTVOL ");
@@ -395,21 +404,21 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 		changes[strlen(changes) - 1] = '\0';
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANGES=%s", changes);
 		envvars.count = n;
-		bluealsa_agent_run_progs(agent, "update", path, &envvars);
+		bluealsa_agent_run_progs("update", path, &envvars);
 	}
 
 }
 
-static int bluealsa_agent_init_client(struct bluealsa_agent *agent) {
+static int bluealsa_agent_init_client() {
 	int ret;
 	struct bluealsa_client_callbacks callbacks = {
 		bluealsa_agent_pcm_added,
 		bluealsa_agent_pcm_removed,
 		bluealsa_agent_pcm_updated,
 		NULL,
-		agent,
+		NULL,
 	};
-	if ((ret = bluealsa_client_open(&agent->client, &callbacks)) < 0) {
+	if ((ret = bluealsa_client_open(&agent.client, &callbacks)) < 0) {
 		error("Unable to open bluealsa interface (%s)", strerror(-ret));
 		return ret;
 	}
@@ -422,9 +431,18 @@ static void bluealsa_agent_terminate(int sig) {
 	terminated = 1;
 }
 
-int main(int argc, char *argv[]) {
+static void bluealsa_agent_reload(void) {
+	if (!agent.program_is_dir)
+		return;
 
-	struct bluealsa_agent agent = { 0 };
+	info("Reloading commands");
+	free(agent.progs);
+	agent.progs = NULL;
+	agent.prog_count = 0;
+	bluealsa_agent_get_progs(agent.program);
+}
+
+int main(int argc, char *argv[]) {
 
 	char **services = malloc(sizeof(char*));
 	services[0] = strdup(BLUEALSA_SERVICE);
@@ -542,11 +560,11 @@ int main(int argc, char *argv[]) {
 	}
 	agent.pcms.capacity = 8;
 
-	bluealsa_agent_get_progs(&agent, programs);
+	bluealsa_agent_get_progs(programs);
 	if (agent.prog_count == 0)
 		exit(EXIT_SUCCESS);
 
-	if (bluealsa_agent_init_client(&agent) < 0)
+	if (bluealsa_agent_init_client() < 0)
 		return EXIT_FAILURE;
 
 	unsigned int index;
@@ -561,16 +579,33 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGTERM, &sigact, NULL);
 	sigaction(SIGINT, &sigact, NULL);
 
-	while (!terminated) {
-		struct pollfd pfds[10];
-		nfds_t pfds_len = ARRAYSIZE(pfds);
-		int res;
+	sigset_t mask;
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGHUP);
+	if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
+		error("sigprocmask");
+		exit(EXIT_FAILURE);
+	}
+	int sfd = signalfd(-1, &mask, 0);
+	if (sfd == -1) {
+		error("signalfd");
+		exit(EXIT_FAILURE);
+	}
+	
+	struct pollfd pfds[11];
+	nfds_t pfds_len = ARRAYSIZE(pfds);
+	pfds[0].fd = sfd;
+	pfds[0].events = POLLIN;
 
-		if (bluealsa_client_poll_fds(agent.client, pfds, &pfds_len) < 0) {
+	while (!terminated) {
+		int res;
+		nfds_t temp = pfds_len - 1;
+		if (bluealsa_client_poll_fds(agent.client, pfds + 1, &temp) < 0) {
 			error("Couldn't get D-Bus connection file descriptors");
 			return EXIT_FAILURE;
 		}
-
+		pfds_len = temp + 1;
+		
 		if ((res = poll(pfds, pfds_len, -1)) == -1 &&
 				errno == EINTR)
 			continue;
@@ -578,7 +613,18 @@ int main(int argc, char *argv[]) {
 		if (res == -1)
 			break;
 
-		bluealsa_client_poll_dispatch(agent.client, pfds, pfds_len);
+		if (pfds[0].revents == POLLIN) {
+			struct signalfd_siginfo fdsi;
+			ssize_t s = read(pfds[0].fd, &fdsi, sizeof(fdsi));
+			if (s != sizeof(fdsi) || fdsi.ssi_signo != SIGHUP) {
+				error("read signalfd");
+				return EXIT_FAILURE;
+			}
+			bluealsa_agent_reload();
+			continue;
+		}
+		
+		bluealsa_client_poll_dispatch(agent.client, pfds + 1, pfds_len - 1);
 	}
 
 	bluealsa_client_close(agent.client);

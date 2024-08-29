@@ -6,7 +6,7 @@ bluealsa-agent
 BlueALSA event handler helper utility
 -------------------------------------
 
-:Date: July 2024
+:Date: August 2024
 :Manual section: 8
 :Manual group: System Manager's Manual
 :Version: @VERSION@
@@ -76,8 +76,10 @@ and optionally if *--status* is used:
 
 If COMMAND is a directory then each file within the directory is executed, in
 alphanumeric order, and **bluealsa-agent** waits for each file to complete
-before starting the next; only one event at a time will be processed. If
-COMMAND is a file then **bluealsa-agent** does not wait for it to complete;
+before starting the next; only one event at a time will be processed.
+**bluealsa-agent** re-reads the directory on receipt of a SIGHUP signal.
+
+If COMMAND is a file then **bluealsa-agent** does not wait for it to complete;
 so it is possible that it may be invoked again by the next event before the
 previous invocation has completed. In either case each executable file is
 invoked by **bluealsa-agent** with two arguments as:
