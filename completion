@@ -10,6 +10,36 @@ _bluealsa_autoconfig() {
 	[[ $COMPREPLY == *= ]] && compopt -o nospace
 }
 
+# helper function completes supported bluealsa-agent status properties
+_bluealsa_agent_status_properties() {
+        local properties=( Running SoftVolume Delay )
+        if [[ "$cur" == *,* ]]; then
+                local realcur prefix chosen remaining
+                realcur="${cur##*,}"
+                prefix="${cur%,*}"
+                IFS="," read -ra chosen <<< "${prefix}"
+                readarray -t remaining < <(printf '%s\n' "${properties[@]}" "${chosen[@]}" | sort | uniq -u)
+                if [[ ${#remaining[@]} -gt 0 ]]; then
+                        readarray -t COMPREPLY < <(compgen -W "${remaining[*]}" -- "$realcur")
+                        if [[ ${#COMPREPLY[@]} -eq 1 ]] ; then
+                                COMPREPLY[0]="$prefix,${COMPREPLY[0]}"
+                        fi
+                        if [[ ${#remaining[@]} -gt 0 && "$cur" == "${COMPREPLY[0]}" ]] ; then
+                                COMPREPLY=( "${COMPREPLY[0]}," )
+                        fi
+                        if [[ ${#remaining[@]} -gt 1 ]]; then
+                                compopt -o nospace
+                        fi
+                fi
+        else
+                readarray -t COMPREPLY < <(compgen -W "${properties[*]}" -- "$cur")
+                if [[ ${#COMPREPLY[@]} -eq 1 && "$cur" == "${COMPREPLY[0]}" ]]; then
+                        COMPREPLY=("${COMPREPLY[0]},")
+                fi
+                compopt -o nospace
+        fi
+}
+
 # completion function for bluealsa-agent
 _bluealsa_agent() {
 	local cur prev words cword split
@@ -26,6 +56,15 @@ _bluealsa_agent() {
 	"--profile")
 		COMPREPLY=( $(compgen -W "a2dp sco" -- $cur) )
 		return
+		;;
+	"--status")
+		if [[ "${words[cword]}" == "" ]] ; then
+			COMPREPLY=( "--status=" )
+			compopt -o nospace
+		else
+			_bluealsa_agent_status_properties
+		fi
+		return;
 		;;
 	esac
 	if [[ "$cur" == "-"* ]] ; then
