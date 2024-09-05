@@ -64,7 +64,7 @@ struct bluealsa_pcm_data {
 	char codec_config[64];
 	char format[16];
 	char channels[3];
-	char sampling[8];
+	char rate[8];
 	char transport[12];
 	char transport_type[5];
 	char service[32];
@@ -147,7 +147,7 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 	if ((format = bluealsa_client_format_to_string(pcm->format)) != NULL)
 		memcpy(pcm_data->format, format, sizeof(pcm_data->format));
 	snprintf(pcm_data->channels, sizeof(pcm_data->channels), "%hhu", pcm->channels);
-	snprintf(pcm_data->sampling, sizeof(pcm_data->sampling), "%u", pcm->sampling);
+	snprintf(pcm_data->rate, sizeof(pcm_data->rate), "%u", pcm->rate);
 	memcpy(pcm_data->transport, transport, sizeof(pcm_data->transport));
 	memcpy(pcm_data->transport_type, transport_type, sizeof(pcm_data->transport_type));
 	memcpy(pcm_data->service, service, sizeof(pcm_data->service));
@@ -294,7 +294,8 @@ static size_t bluealsa_agent_init_envvars(envvars_t *envvars, const struct bluea
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_CODEC_CONFIG=%s", pcm_data->codec_config);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_FORMAT=%s", pcm_data->format);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_CHANNELS=%s", pcm_data->channels);
-	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_SAMPLING=%s", pcm_data->sampling);
+	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_SAMPLING=%s", pcm_data->rate);
+	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_RATE=%s", pcm_data->rate);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_TRANSPORT=%s", pcm_data->transport);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE=%s", pcm_data->transport_type);
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_SERVICE=%s", pcm_data->service);
@@ -372,9 +373,9 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 		snprintf(pcm_data->channels, sizeof(pcm_data->channels), "%hhu", props->channels);
 		strcat(changes, "CHANNELS ");
 	}
-	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_SAMPLING) {
-		snprintf(pcm_data->sampling, sizeof(pcm_data->sampling), "%u", props->sampling);
-		strcat(changes, "SAMPLING ");
+	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_RATE) {
+		snprintf(pcm_data->rate, sizeof(pcm_data->rate), "%u", props->rate);
+		strcat(changes, "RATE SAMPLING ");
 	}
 
 	if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG) {

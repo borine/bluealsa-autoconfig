@@ -125,9 +125,13 @@ These variables are set for all events:
   ``BLUEALSA_PCM_PROPERTY_PROFILE``
     The Bluetooth profile, for example ``A2DP`` or ``HFP``
 
-  ``BLUEALSA_PCM_PROPERTY_SAMPLING``
+  ``BLUEALSA_PCM_PROPERTY_RATE``
     The audio sample rate in frames per second, for example ``48000`` or
     ``16000``.
+
+  ``BLUEALSA_PCM_PROPERTY_SAMPLING``
+    Deprecated synonym for ``BLUEALSA_PCM_PROPERTY_RATE``. Will be discontinued
+    in a future release.
 
   ``BLUEALSA_PCM_PROPERTY_SERVICE``
     The D-Bus well-known name of the BlueALSA service handling this PCM, for
@@ -172,9 +176,13 @@ environment variable is set:
 
       RUNNING
 
-      SAMPLING
+      RATE
 
       SOFTVOL
+
+For compatibility with older versions, the word "SAMPLING" is also included when
+the rate has changed. Use of this term is deprecated and will be discontinued in
+a future release.
 
 SEE ALSO
 ========

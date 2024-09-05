@@ -252,11 +252,17 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 		dbus_message_iter_get_basic(iter, &props->channels);
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_CHANNELS;
 	}
+	else if (strcmp(name, "Rate") == 0) {
+		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_UINT32)
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		dbus_message_iter_get_basic(iter, &props->rate);
+		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_RATE;
+	}
 	else if (strcmp(name, "Sampling") == 0) {
 		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_UINT32)
 			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		dbus_message_iter_get_basic(iter, &props->sampling);
-		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_SAMPLING;
+		dbus_message_iter_get_basic(iter, &props->rate);
+		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_RATE;
 	}
 	else if (strcmp(name, "Codec") == 0) {
 		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_STRING)
@@ -291,9 +297,25 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_SOFTVOL;
 	}
 	else if (strcmp(name, "Volume") == 0) {
-		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_UINT16)
+		switch (dbus_message_iter_get_arg_type(iter)) {
+		case DBUS_TYPE_UINT16: {
+			uint16_t vol;
+			dbus_message_iter_get_basic(iter, &vol);
+			memcpy(&props->volume, &vol, 2);
+			break;
+		}
+		case DBUS_TYPE_ARRAY: {
+			DBusMessageIter iter_vol;
+			uint8_t *data;
+			int len;
+			dbus_message_iter_recurse(iter, &iter_vol);
+			dbus_message_iter_get_fixed_array(&iter_vol, &data, &len);
+			memcpy(&props->volume, data, MIN(len, ARRAYSIZE(props->volume)));
+			break;
+		}
+		default:
 			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		dbus_message_iter_get_basic(iter, &props->volume);
+		}
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME;
 	}
 	else if (strcmp(name, "Running") == 0) {
@@ -302,6 +324,18 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 		dbus_message_iter_get_basic(iter, &props->running);
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING;
 	}
+	else if (strcmp(name, "ChannelMap") == 0) {
+		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_ARRAY)
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		const char *data[ARRAYSIZE(props->channel_map)];
+		size_t length = ARRAYSIZE(data);
+		if (!dbus_message_iter_array_get_strings(iter, NULL, data, &length))
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		for (size_t i = 0; i < length; i++)
+			strncpy(props->channel_map[i], data[i], sizeof(props->channel_map[i]) - 1);
+		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_CHANNEL_MAP;
+	}
+	
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 

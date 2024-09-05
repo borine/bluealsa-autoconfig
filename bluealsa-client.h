@@ -26,24 +26,25 @@ struct bluealsa_pcm_properties {
 	uint16_t mask;
 	uint16_t format;
 	uint8_t channels;
-	uint32_t sampling;
+	char channel_map[8][5];
+	uint32_t rate;
 	struct ba_pcm_codec codec;
 	bool running;
 	uint16_t delay;
 	bool softvolume;
-	uint16_t volume;
+	uint8_t volume[8];
 };
 
 #define BLUEALSA_PCM_PROPERTY_CHANGED_FORMAT       (1 << 0)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_CHANNELS     (1 << 1)
-#define BLUEALSA_PCM_PROPERTY_CHANGED_SAMPLING     (1 << 2)
+#define BLUEALSA_PCM_PROPERTY_CHANGED_RATE         (1 << 2)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_CODEC        (1 << 3)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG (1 << 4)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING      (1 << 5)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_DELAY        (1 << 6)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_SOFTVOL      (1 << 7)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME       (1 << 8)
-
+#define BLUEALSA_PCM_PROPERTY_CHANGED_CHANNEL_MAP  (1 << 9)
 
 typedef void (*pcm_added_t)(const struct ba_pcm *pcm, const char *service, void *data);
 typedef void (*pcm_removed_t)(const char *path, void *data);

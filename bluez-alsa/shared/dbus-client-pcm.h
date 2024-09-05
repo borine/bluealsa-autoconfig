@@ -85,10 +85,12 @@ struct ba_pcm_codec {
 	 * the list of available codecs or currently selected codec. */
 	uint8_t data[24];
 	size_t data_len;
-	/* channels supported by the codec */
+	/* number of channels supported by the codec */
 	unsigned char channels[8];
-	/* sampling frequencies supported by the codec */
-	dbus_uint32_t sampling[16];
+	/* channel maps associated with supported number of channels */
+	char channel_maps[8][8][5];
+	/* sample rates supported by the codec */
+	dbus_uint32_t rates[16];
 };
 
 /**
@@ -121,8 +123,10 @@ struct ba_pcm {
 	dbus_uint16_t format;
 	/* number of audio channels */
 	unsigned char channels;
-	/* PCM sampling frequency */
-	dbus_uint32_t sampling;
+	/* channel map for selected codec */
+	char channel_map[8][5];
+	/* PCM sample rate */
+	dbus_uint32_t rate;
 
 	/* device address */
 	bdaddr_t addr;
@@ -135,25 +139,21 @@ struct ba_pcm {
 	/* software volume */
 	dbus_bool_t soft_volume;
 
-	/* 16-bit packed PCM volume */
+	/* per-channel volume */
 	union {
 		struct {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-			dbus_uint16_t ch2_volume:7;
-			dbus_uint16_t ch2_muted:1;
-			dbus_uint16_t ch1_volume:7;
-			dbus_uint16_t ch1_muted:1;
+			uint8_t volume:7;
+			uint8_t muted:1;
 #elif __BYTE_ORDER == __BIG_ENDIAN
-			dbus_uint16_t ch1_muted:1;
-			dbus_uint16_t ch1_volume:7;
-			dbus_uint16_t ch2_muted:1;
-			dbus_uint16_t ch2_volume:7;
+			uint8_t muted:1;
+			uint8_t volume:7;
 #else
 # error "Unknown byte order"
 #endif
 		};
-		dbus_uint16_t raw;
-	} volume;
+		uint8_t raw;
+	} volume[8];
 
 };
 
@@ -200,7 +200,7 @@ dbus_bool_t ba_dbus_pcm_select_codec(
 		const void *configuration,
 		size_t configuration_len,
 		unsigned int channels,
-		unsigned int sampling,
+		unsigned int rate,
 		unsigned int flags,
 		DBusError *error);
 

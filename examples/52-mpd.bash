@@ -59,7 +59,7 @@ case "$BLUEALSA_PCM_PROPERTY_MODE" in
 	fi
 	case "$BLUEALSA_PCM_PROPERTY_RUNNING" in
 	"true")
-		URI="alsa://bluealsa:PROFILE=a2dp?format=${BLUEALSA_PCM_PROPERTY_SAMPLING:-48000}:16:${BLUEALSA_PCM_PROPERTY_CHANNELS:-2}"
+		URI="alsa://bluealsa:PROFILE=a2dp?format=${BLUEALSA_PCM_PROPERTY_RATE:-48000}:16:${BLUEALSA_PCM_PROPERTY_CHANNELS:-2}"
 		mpc -q insert "$URI" || exit
 		read ba_pos ba_id <<<$(mpc -f "%position% %id%" queued)
 		[[ $ba_id == 0 ]] && read -r ba_pos ba_id <<<$(mpc -f "%position% %id%" playlist | head -1)

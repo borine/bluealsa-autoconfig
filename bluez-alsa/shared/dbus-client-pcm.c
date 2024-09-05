@@ -229,35 +229,57 @@ static void dbus_message_iter_get_codec_data(DBusMessageIter *variant,
 
 }
 
-static void dbus_message_iter_get_codec_supported_channels(DBusMessageIter *variant,
+static void dbus_message_iter_get_codec_channels(DBusMessageIter *variant,
 		struct ba_pcm_codec *codec) {
 
-		DBusMessageIter iter;
-		unsigned char *data;
-		int len;
+	DBusMessageIter iter;
+	unsigned char *data;
+	int len;
 
-		dbus_message_iter_recurse(variant, &iter);
-		dbus_message_iter_get_fixed_array(&iter, &data, &len);
+	dbus_message_iter_recurse(variant, &iter);
+	dbus_message_iter_get_fixed_array(&iter, &data, &len);
 
-		len = MIN(len, ARRAYSIZE(codec->channels));
-		for (size_t i = 0; i < (size_t)len; i++)
-			codec->channels[i] = data[i];
+	len = MIN(len, ARRAYSIZE(codec->channels));
+	for (size_t i = 0; i < (size_t)len; i++)
+		codec->channels[i] = data[i];
 
 }
 
-static void dbus_message_iter_get_codec_supported_sampling(DBusMessageIter *variant,
+static void dbus_message_iter_get_codec_rates(DBusMessageIter *variant,
 		struct ba_pcm_codec *codec) {
 
-		DBusMessageIter iter;
-		dbus_uint32_t *data;
-		int len;
+	DBusMessageIter iter;
+	dbus_uint32_t *data;
+	int len;
 
-		dbus_message_iter_recurse(variant, &iter);
-		dbus_message_iter_get_fixed_array(&iter, &data, &len);
+	dbus_message_iter_recurse(variant, &iter);
+	dbus_message_iter_get_fixed_array(&iter, &data, &len);
 
-		len = MIN(len, ARRAYSIZE(codec->sampling));
-		for (size_t i = 0; i < (size_t)len; i++)
-			codec->sampling[i] = data[i];
+	len = MIN(len, ARRAYSIZE(codec->rates));
+	for (size_t i = 0; i < (size_t)len; i++)
+		codec->rates[i] = data[i];
+
+}
+
+static void dbus_message_iter_get_codec_channel_maps(DBusMessageIter *variant,
+		struct ba_pcm_codec *codec) {
+
+	size_t i;
+	DBusMessageIter iter_array;
+	for (dbus_message_iter_recurse(variant, &iter_array), i = 0;
+			dbus_message_iter_get_arg_type(&iter_array) != DBUS_TYPE_INVALID;
+			dbus_message_iter_next(&iter_array)) {
+
+		const char *data[ARRAYSIZE(*codec->channel_maps)];
+		size_t length = ARRAYSIZE(data);
+
+		dbus_message_iter_array_get_strings(&iter_array, NULL, data, &length);
+
+		for (size_t j = 0; j < length; j++)
+			strncpy(codec->channel_maps[i][j], data[j], sizeof(codec->channel_maps[i][j]) - 1);
+
+		i++;
+	}
 
 }
 
@@ -285,15 +307,20 @@ static dbus_bool_t ba_dbus_message_iter_pcm_codec_get_props_cb(const char *key,
 			goto fail;
 		dbus_message_iter_get_codec_data(&variant, codec);
 	}
-	else if (strcmp(key, "SupportedChannels") == 0) {
+	else if (strcmp(key, "Channels") == 0) {
 		if (type != (type_expected = DBUS_TYPE_ARRAY))
 			goto fail;
-		dbus_message_iter_get_codec_supported_channels(&variant, codec);
+		dbus_message_iter_get_codec_channels(&variant, codec);
 	}
-	else if (strcmp(key, "SupportedSampling") == 0) {
+	else if (strcmp(key, "ChannelMaps") == 0) {
 		if (type != (type_expected = DBUS_TYPE_ARRAY))
 			goto fail;
-		dbus_message_iter_get_codec_supported_sampling(&variant, codec);
+		dbus_message_iter_get_codec_channel_maps(&variant, codec);
+	}
+	else if (strcmp(key, "Rates") == 0) {
+		if (type != (type_expected = DBUS_TYPE_ARRAY))
+			goto fail;
+		dbus_message_iter_get_codec_rates(&variant, codec);
 	}
 
 	return TRUE;
@@ -396,7 +423,7 @@ dbus_bool_t ba_dbus_pcm_select_codec(
 		const void *configuration,
 		size_t configuration_len,
 		unsigned int channels,
-		unsigned int sampling,
+		unsigned int rate,
 		unsigned int flags,
 		DBusError *error) {
 
@@ -446,9 +473,9 @@ dbus_bool_t ba_dbus_pcm_select_codec(
 		}
 	}
 
-	if (sampling != 0) {
-		const uint32_t value = sampling;
-		if (!dbus_message_iter_dict_append_basic(&props, "Sampling", DBUS_TYPE_UINT32, &value)) {
+	if (rate != 0) {
+		const uint32_t value = rate;
+		if (!dbus_message_iter_dict_append_basic(&props, "Rate", DBUS_TYPE_UINT32, &value)) {
 			dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, NULL);
 			goto fail;
 		}
@@ -529,22 +556,16 @@ dbus_bool_t ba_dbus_pcm_update(
 
 	static const char *interface = BLUEALSA_INTERFACE_PCM;
 	const char *_property = NULL;
-	const char *variant = NULL;
-	const void *value = NULL;
-	int type = -1;
+	const char *type = NULL;
 
 	switch (property) {
 	case BLUEALSA_PCM_SOFT_VOLUME:
 		_property = "SoftVolume";
-		variant = DBUS_TYPE_BOOLEAN_AS_STRING;
-		value = &pcm->soft_volume;
-		type = DBUS_TYPE_BOOLEAN;
+		type = DBUS_TYPE_BOOLEAN_AS_STRING;
 		break;
 	case BLUEALSA_PCM_VOLUME:
 		_property = "Volume";
-		variant = DBUS_TYPE_UINT16_AS_STRING;
-		value = &pcm->volume.raw;
-		type = DBUS_TYPE_UINT16;
+		type = DBUS_TYPE_ARRAY_AS_STRING DBUS_TYPE_BYTE_AS_STRING;
 		break;
 	}
 
@@ -554,14 +575,30 @@ dbus_bool_t ba_dbus_pcm_update(
 		goto fail;
 
 	DBusMessageIter iter;
-	DBusMessageIter iter_val;
+	DBusMessageIter variant;
 
 	dbus_message_iter_init_append(msg, &iter);
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &interface) ||
 			!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &_property) ||
-			!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT, variant, &iter_val) ||
-			!dbus_message_iter_append_basic(&iter_val, type, value) ||
-			!dbus_message_iter_close_container(&iter, &iter_val))
+			!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT, type, &variant))
+		goto fail;
+
+	switch (property) {
+	case BLUEALSA_PCM_SOFT_VOLUME:
+		if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_BOOLEAN, &pcm->soft_volume))
+			goto fail;
+		break;
+	case BLUEALSA_PCM_VOLUME: {
+		DBusMessageIter array;
+		const void *volume = &pcm->volume;
+		if (!dbus_message_iter_open_container(&variant, DBUS_TYPE_ARRAY, "y", &array) ||
+				!dbus_message_iter_append_fixed_array(&array, DBUS_TYPE_BYTE, &volume, pcm->channels) ||
+				!dbus_message_iter_close_container(&variant, &array))
+			goto fail;
+	} break;
+	}
+
+	if (!dbus_message_iter_close_container(&iter, &variant))
 		goto fail;
 
 	if (!dbus_connection_send(ctx->conn, msg, NULL))
@@ -760,11 +797,25 @@ static dbus_bool_t dbus_message_iter_get_ba_pcm_props_cb(const char *key,
 		dbus_message_iter_get_basic(&variant, &pcm->channels);
 		pcm->codec.channels[0] = pcm->channels;
 	}
-	else if (strcmp(key, "Sampling") == 0) {
+	else if (strcmp(key, "ChannelMap") == 0) {
+		if (type != (type_expected = DBUS_TYPE_ARRAY))
+			goto fail;
+
+		const char *data[ARRAYSIZE(pcm->channel_map)];
+		size_t length = ARRAYSIZE(data);
+
+		if (!dbus_message_iter_array_get_strings(&variant, error, data, &length))
+			return FALSE;
+
+		for (size_t i = 0; i < length; i++)
+			strncpy(pcm->channel_map[i], data[i], sizeof(pcm->channel_map[i]) - 1);
+
+	}
+	else if (strcmp(key, "Rate") == 0 || strcmp(key, "Sampling") == 0) {
 		if (type != (type_expected = DBUS_TYPE_UINT32))
 			goto fail;
-		dbus_message_iter_get_basic(&variant, &pcm->sampling);
-		pcm->codec.sampling[0] = pcm->sampling;
+		dbus_message_iter_get_basic(&variant, &pcm->rate);
+		pcm->codec.rates[0] = pcm->rate;
 	}
 	else if (strcmp(key, "Codec") == 0) {
 		if (type != (type_expected = DBUS_TYPE_STRING))
@@ -793,9 +844,18 @@ static dbus_bool_t dbus_message_iter_get_ba_pcm_props_cb(const char *key,
 		dbus_message_iter_get_basic(&variant, &pcm->soft_volume);
 	}
 	else if (strcmp(key, "Volume") == 0) {
-		if (type != (type_expected = DBUS_TYPE_UINT16))
+		if (type != (type_expected = DBUS_TYPE_ARRAY))
 			goto fail;
-		dbus_message_iter_get_basic(&variant, &pcm->volume.raw);
+
+		DBusMessageIter iter;
+		uint8_t *data;
+		int len;
+
+		dbus_message_iter_recurse(&variant, &iter);
+		dbus_message_iter_get_fixed_array(&iter, &data, &len);
+
+		memcpy(pcm->volume, data, MIN(len, ARRAYSIZE(pcm->volume)));
+
 	}
 
 	return TRUE;
