@@ -86,13 +86,13 @@ static int bluealsa_autoconfig_init_alsa(const char *progname) {
 	alsa_version_init();
 
 	/* Ensure the required directories exist */
+	mode_t mask = umask(~(S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH));
 	int ret = mkdir(BLUEALSA_AUTOCONFIG_CONFIG_DIR, 0775);
 	if (ret < 0 && errno != EEXIST) {
 		error(BLUEALSA_AUTOCONFIG_CONFIG_DIR ": %s\n", strerror(errno));
 		return -1;
 	}
 
-	mode_t mask = umask(~(S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH));
 	ret = mkdir(BLUEALSA_AUTOCONFIG_RUN_DIR, 0775);
 	if (ret < 0 && errno != EEXIST) {
 		error(BLUEALSA_AUTOCONFIG_RUN_DIR ": %s\n", strerror(errno));
