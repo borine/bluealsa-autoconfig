@@ -122,56 +122,9 @@ A systemd system service unit file is included for `bluealsa-autoconfig`
 response to BlueALSA PCM D-Bus signals. It does not require `root` privileges
 and is intended to be used as a user service.
 
-For a trivial example, suppose it is required to display a desktop info pop-up
-whenever a BlueALSA PCM is added or removed; one could save the following
-shell script as `~/bluealsa-notify` and then run `bluealsa-agent` in the display
-session as
-```
-bluealsa-agent ~/bluealsa-notify
-```
-
-```
-#!/bin/sh
-
-title="BlueALSA PCM"
-case "$1" in
-	"add")
-		title="$title Added"
-		;;
-	"remove")
-		title="$title Removed"
-		;;
-	*)
-		exit 0
-		;;
-esac
-
-text="dbus path: $2"
-
-[ "$BLUEALSA_PCM_PROPERTY_NAME" ] && text="${text}\nname: $BLUEALSA_PCM_PROPERTY_NAME"
-[ "$BLUEALSA_PCM_PROPERTY_ADDRESS" ] && text="${text}\naddress: $BLUEALSA_PCM_PROPERTY_ADDRESS"
-[ "$BLUEALSA_PCM_PROPERTY_PROFILE" ] && text="${text}\nprofile: $BLUEALSA_PCM_PROPERTY_PROFILE"
-[ "$BLUEALSA_PCM_PROPERTY_MODE" ] && text="${text}\nmode: $BLUEALSA_PCM_PROPERTY_MODE"
-[ "$BLUEALSA_PCM_PROPERTY_CODEC" ] && text="${text}\ncodec: $BLUEALSA_PCM_PROPERTY_CODEC"
-[ "$BLUEALSA_PCM_PROPERTY_CODEC_CONFIG" ] && text="${text}\ncodec config: $BLUEALSA_PCM_PROPERTY_CODEC_CONFIG"
-
-[ "$BLUEALSA_PCM_PROPERTY_FORMAT" ] && text="${text}\nformat: $BLUEALSA_PCM_PROPERTY_FORMAT"
-[ "$BLUEALSA_PCM_PROPERTY_CHANNELS" ] && text="${text}\nchannels: $BLUEALSA_PCM_PROPERTY_CHANNELS"
-[ "$BLUEALSA_PCM_PROPERTY_SAMPLING" ] && text="${text}\nsampling: $BLUEALSA_PCM_PROPERTY_SAMPLING"
-[ "$BLUEALSA_PCM_PROPERTY_TRANSPORT" ] && text="${text}\ntransport: $BLUEALSA_PCM_PROPERTY_TRANSPORT"
-[ "$BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE" ] && text="${text}\ntransport type: $BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE"
-[ "$BLUEALSA_PCM_PROPERTY_SERVICE" ] && text="${text}\nservice: $BLUEALSA_PCM_PROPERTY_SERVICE"
-[ "$BLUEALSA_PCM_PROPERTY_ALSA_ID" ] && text="${text}\nALSA id: $BLUEALSA_PCM_PROPERTY_ALSA_ID"
-[ "$BLUEALSA_PCM_PROPERTY_RUNNING" ] && text="${text}\nrunning: $BLUEALSA_PCM_PROPERTY_RUNNING"
-[ "$BLUEALSA_PCM_PROPERTY_SOFTVOL" ] && text="${text}\nsoftvol: $BLUEALSA_PCM_PROPERTY_SOFTVOL"
-[ "$BLUEALSA_PCM_PROPERTY_CHANGES" ] && text="${text}\nchanges: $BLUEALSA_PCM_PROPERTY_CHANGES"
-[ "$BLUEALSA_AGENT_SYSTEMD" ] && text="${text}\nsystemd session: $BLUEALSA_AGENT_SYSTEMD"
-
-exec /usr/bin/zenity --info --title="$title" --text="$text"
-```
 See the [manual page](./bluealsa-agent.8.rst.in) for full details.
 
-Some more practical example scripts are included in the
+Some practical example scripts are included in the
 [examples directory](./examples/examples.md)
 
 ## Installation
