@@ -8,6 +8,10 @@ Bluetooth audio user experience when using BlueALSA. See
 [The bluez-alsa project](https://github.com/arkq/bluez-alsa) for more
 information on BlueALSA.
 
+> [!Important]
+> This version supports only BlueALSA latest development sources, it is not
+> compatible with BlueALSA 4.3.1 or earlier
+
 ## bluealsa-autoconfig
 
 `bluealsa-autoconfig` is a simple program to add and remove ALSA configuration
