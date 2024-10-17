@@ -30,6 +30,7 @@ struct bluealsa_pcm_properties {
 	uint32_t rate;
 	struct ba_pcm_codec codec;
 	bool running;
+	uint16_t client_delay;
 	uint16_t delay;
 	bool softvolume;
 	uint8_t volume[8];
@@ -41,6 +42,7 @@ struct bluealsa_pcm_properties {
 #define BLUEALSA_PCM_PROPERTY_CHANGED_CODEC        (1 << 3)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG (1 << 4)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING      (1 << 5)
+#define BLUEALSA_PCM_PROPERTY_CHANGED_CLIENT_DELAY (1 << 6)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_DELAY        (1 << 6)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_SOFTVOL      (1 << 7)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME       (1 << 8)

@@ -154,6 +154,9 @@ for the "added" and "update" events as determined by the *PROPLIST*:
     ``true`` when the BlueALSA "SoftVolume" property is enabled for this PCM.
     See ``bluealsa(8)`` for more information.
 
+  ``BLUEALSA_PCM_PROPERTY_CLIENT_DELAY``
+    The current client delay adjustment, in units of 1/10 millisecond.
+
   ``BLUEALSA_PCM_PROPERTY_DELAY``
     The current delay, in units of 1/10 millisecond.
 
@@ -165,6 +168,8 @@ environment variable is set:
     or more from:
 
       CHANNELS
+
+      CLIENT_DELAY
 
       CODEC
 

@@ -284,6 +284,12 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 		memcpy(props->codec.data, config, props->codec.data_len);
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG;
 	}
+	else if (strcmp(name, "ClientDelay") == 0) {
+		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_UINT16)
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		dbus_message_iter_get_basic(iter, &props->client_delay);
+		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_CLIENT_DELAY;
+	}
 	else if (strcmp(name, "Delay") == 0) {
 		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_UINT16)
 			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
