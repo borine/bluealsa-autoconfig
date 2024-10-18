@@ -43,14 +43,12 @@ enum bluealsa_mode {
 };
 
 enum {
-	PROPERTY_CLIENT_DELAY = 1 << 0,
-	PROPERTY_DELAY        = 1 << 1,
-	PROPERTY_RUNNING      = 1 << 2,
-	PROPERTY_SOFTVOL      = 1 << 3,
+	PROPERTY_DELAY   = 1 << 0,
+	PROPERTY_RUNNING = 1 << 1,
+	PROPERTY_SOFTVOL = 1 << 2,
 };
 
 static const char *bluealsa_properties[] = {
-	"ClientDelay",
 	"Delay",
 	"Running",
 	"SoftVolume",
@@ -91,7 +89,7 @@ struct bluealsa_agent {
 };
 
 typedef struct {
-	char string[17][256];
+	char string[19][256];
 	size_t count;
 } envvars_t;
 
@@ -322,10 +320,10 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
 
-	if (agent.properties & PROPERTY_CLIENT_DELAY)
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CLIENT_DELAY=%d", pcm->client_delay);
-	if (agent.properties & PROPERTY_DELAY)
+	if (agent.properties & PROPERTY_DELAY) {
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", pcm->delay);
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CLIENT_DELAY=%d", pcm->client_delay);
+	}
 	if (agent.properties & PROPERTY_RUNNING)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", pcm->running ? "true" : "false");
 	if (agent.properties & PROPERTY_SOFTVOL)
@@ -389,16 +387,16 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
 
-	if (agent.properties & PROPERTY_CLIENT_DELAY)
-		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CLIENT_DELAY) {
-			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", props->client_delay);
-			strcat(changes, "DELAY ");
-		}
-	if (agent.properties & PROPERTY_DELAY)
+	if (agent.properties & PROPERTY_DELAY) {
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_DELAY) {
 			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", props->delay);
 			strcat(changes, "DELAY ");
 		}
+		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CLIENT_DELAY) {
+			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CLIENT_DELAY=%d", props->client_delay);
+			strcat(changes, "CLIENT_DELAY ");
+		}
+	}
 	if (agent.properties & PROPERTY_RUNNING)
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING) {
 			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", props->running ? "true" : "false");

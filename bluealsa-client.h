@@ -43,10 +43,10 @@ struct bluealsa_pcm_properties {
 #define BLUEALSA_PCM_PROPERTY_CHANGED_CODEC_CONFIG (1 << 4)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_RUNNING      (1 << 5)
 #define BLUEALSA_PCM_PROPERTY_CHANGED_CLIENT_DELAY (1 << 6)
-#define BLUEALSA_PCM_PROPERTY_CHANGED_DELAY        (1 << 6)
-#define BLUEALSA_PCM_PROPERTY_CHANGED_SOFTVOL      (1 << 7)
-#define BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME       (1 << 8)
-#define BLUEALSA_PCM_PROPERTY_CHANGED_CHANNEL_MAP  (1 << 9)
+#define BLUEALSA_PCM_PROPERTY_CHANGED_DELAY        (1 << 7)
+#define BLUEALSA_PCM_PROPERTY_CHANGED_SOFTVOL      (1 << 8)
+#define BLUEALSA_PCM_PROPERTY_CHANGED_VOLUME       (1 << 9)
+#define BLUEALSA_PCM_PROPERTY_CHANGED_CHANNEL_MAP  (1 << 10)
 
 typedef void (*pcm_added_t)(const struct ba_pcm *pcm, const char *service, void *data);
 typedef void (*pcm_removed_t)(const char *path, void *data);

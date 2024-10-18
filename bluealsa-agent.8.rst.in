@@ -144,7 +144,7 @@ These variables are set for all events:
     The Bluetooth transport type, either ``A2DP`` or ``SCO``.
 
 When *--status* is used, then additional environment variables are also set
-for the "added" and "update" events as determined by the *PROPLIST*:
+for the "added" and "update" events as determined by the *PROPLIST*.
  
   ``BLUEALSA_PCM_PROPERTY_RUNNING``
     ``true`` if the PCM is running (i.e. when the underlying Bluetooth transport
