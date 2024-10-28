@@ -69,6 +69,8 @@ struct bluealsa_pcm_data {
 	char transport_type[5];
 	char service[32];
 	char alsa_id[96];
+	uint16_t server_delay;
+	int16_t client_delay;
 };
 
 struct bluealsa_agent {
@@ -151,6 +153,8 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 	memcpy(pcm_data->transport, transport, sizeof(pcm_data->transport));
 	memcpy(pcm_data->transport_type, transport_type, sizeof(pcm_data->transport_type));
 	memcpy(pcm_data->service, service, sizeof(pcm_data->service));
+	pcm_data->server_delay = pcm->delay;
+	pcm_data->client_delay = pcm->client_delay;
 
 	const bool show_service = (strcmp(service, "org.bluealsa.") > 0);
 	snprintf(pcm_data->alsa_id, sizeof(pcm_data->alsa_id), "bluealsa:DEV=%s,PROFILE=%s%s%s", pcm_data->address, transport_type, show_service ? ",SRV=" : "", show_service ? service + strlen("org.bluealsa.") : "");
@@ -321,8 +325,8 @@ static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *servi
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
 
 	if (agent.properties & PROPERTY_DELAY) {
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", pcm->delay);
-		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CLIENT_DELAY=%d", pcm->client_delay);
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%u", pcm_data->server_delay);
+		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CLIENT_DELAY=%d", pcm_data->client_delay);
 	}
 	if (agent.properties & PROPERTY_RUNNING)
 		snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_RUNNING=%s", pcm->running ? "true" : "false");
@@ -388,13 +392,20 @@ static void bluealsa_agent_pcm_updated(const char *path, const char *service, st
 	n = bluealsa_agent_init_envvars(&envvars, pcm_data);
 
 	if (agent.properties & PROPERTY_DELAY) {
+		bool changed = false;
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_DELAY) {
-			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%d", props->delay);
+			pcm_data->server_delay = props->delay;
 			strcat(changes, "DELAY ");
+			changed = true;
 		}
 		if (props->mask & BLUEALSA_PCM_PROPERTY_CHANGED_CLIENT_DELAY) {
-			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CLIENT_DELAY=%d", props->client_delay);
+			pcm_data->client_delay = props->client_delay;
 			strcat(changes, "CLIENT_DELAY ");
+			changed = true;
+		}
+		if (changed) {
+			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_DELAY=%u", pcm_data->server_delay);
+			snprintf(envvars.string[n++], 256, "BLUEALSA_PCM_PROPERTY_CLIENT_DELAY=%d", pcm_data->client_delay);
 		}
 	}
 	if (agent.properties & PROPERTY_RUNNING)
