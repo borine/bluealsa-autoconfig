@@ -530,11 +530,14 @@ dbus_bool_t ba_dbus_pcm_update(
 		type = DBUS_TYPE_BOOLEAN_AS_STRING;
 		break;
 	case BLUEALSA_PCM_VOLUME:
+#if 0
 		_property = "Volume";
 		type = DBUS_TYPE_ARRAY_AS_STRING DBUS_TYPE_BYTE_AS_STRING;
+#else
+		return FALSE;
+#endif
 		break;
 	}
-
 	DBusMessage *msg;
 	if ((msg = dbus_message_new_method_call(ctx->ba_service, pcm->pcm_path,
 					DBUS_INTERFACE_PROPERTIES, "Set")) == NULL)
@@ -558,6 +561,7 @@ dbus_bool_t ba_dbus_pcm_update(
 		if (!dbus_message_iter_append_basic(&variant, DBUS_TYPE_BOOLEAN, &pcm->soft_volume))
 			goto fail;
 		break;
+#if 0
 	case BLUEALSA_PCM_VOLUME: {
 		DBusMessageIter array;
 		const void *volume = &pcm->volume;
@@ -566,6 +570,11 @@ dbus_bool_t ba_dbus_pcm_update(
 				!dbus_message_iter_close_container(&variant, &array))
 			goto fail;
 	} break;
+#else
+	case BLUEALSA_PCM_VOLUME:
+		goto fail;
+		break;
+#endif
 	}
 
 	if (!dbus_message_iter_close_container(&iter, &variant))
@@ -813,6 +822,7 @@ static dbus_bool_t dbus_message_iter_get_ba_pcm_props_cb(const char *key,
 			goto fail;
 		dbus_message_iter_get_basic(&variant, &pcm->soft_volume);
 	}
+#if 0
 	else if (strcmp(key, "Volume") == 0) {
 		if (type != (type_expected = DBUS_TYPE_ARRAY))
 			goto fail;
@@ -827,7 +837,7 @@ static dbus_bool_t dbus_message_iter_get_ba_pcm_props_cb(const char *key,
 		memcpy(pcm->volume, data, MIN(len, ARRAYSIZE(pcm->volume)));
 
 	}
-
+#endif
 	return TRUE;
 
 fail:
