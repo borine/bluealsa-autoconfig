@@ -500,40 +500,34 @@ static int bluealsa_namehint_hint_expand_description(const struct bluealsa_nameh
 int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, const char *pattern, bool with_service) {
 	struct bluealsa_namehint_hint *h = hint->hints;
 	struct bluealsa_namehint_device *d = hint->devices;
+	unsigned int alsa_version = alsa_version_id();
+	const char *desc_separator = alsa_version >= 0x010203 ? "|" : "|DESC";
+
 	while (h != NULL) {
 		char description[256];
 		int ret = bluealsa_namehint_hint_expand_description(h, pattern, description, 256);
 		if (ret < 0)
 			return ret;
 
-		fprintf(file, "namehint.pcm._bluealsa%u \"bluealsa:DEV=%s,PROFILE=%s%s%s"
-#if SND_LIB_VERSION >= 0x010203
-				"|%s"
-#else
-				"|DESC%s"
-#endif
-				"%s\"\n",
+		fprintf(file, "namehint.pcm._bluealsa%u \"bluealsa:DEV=%s,PROFILE=%s%s%s%s%s%s\"\n",
 			h->id,
 			h->device->hex_addr,
 			profiles[h->profile].type,
 			with_service ? ",SRV=" : "",
 			with_service ? h->device->service : "",
+			desc_separator,
 			description,
 			h->stream == BA_PCM_MODE_SOURCE ? "|IOIDInput" :
 				h->stream == BA_PCM_MODE_SINK ? "|IOIDOutput" : "");
 		h = h->next;
 	}
 	while (d != NULL) {
-		fprintf(file, "namehint.ctl._bluealsa%u \"bluealsa:DEV=%s,SRV=%s"
-#if SND_LIB_VERSION >= 0x010203
-				"|%s"
-#else
-				"|DESC%s"
-#endif
-				"\nBluetooth Audio Control Device\"\n",
+		fprintf(file, "namehint.ctl._bluealsa%u \"bluealsa:DEV=%s,SRV=%s%s%s\n"
+				"Bluetooth Audio Control Device\"\n",
 			d->id,
 			d->hex_addr,
 			d->service,
+			desc_separator,
 			d->alias);
 		d = d->next;
 	}
