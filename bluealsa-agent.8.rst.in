@@ -192,7 +192,7 @@ a future release.
 SEE ALSO
 ========
 
-``bluealsa(8)``
+``bluealsad(8)``
 
 Project web site
   https://github.com/borine/bluealsa-autoconfig

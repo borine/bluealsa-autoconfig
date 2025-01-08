@@ -240,7 +240,7 @@ applications when using the include method.
 SEE ALSO
 ========
 
-``bluealsa(8)``, ``bluealsa-plugins(7)``, ``udev(7)``
+``bluealsad(8)``, ``bluealsa-plugins(7)``, ``udev(7)``
 
 Project web site
   https://github.com/borine/bluealsa-autoconfig
