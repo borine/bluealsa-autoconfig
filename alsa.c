@@ -11,31 +11,46 @@
 
 #include "alsa.h"
 
+#include <pthread.h>
+
 static struct {
 	const char *string;
+	unsigned int id;
+} alsa_version = { 0 };
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void alsa_version_init(void) {
 	unsigned int major;
 	unsigned int minor;
 	unsigned int subminor;
 	unsigned int extra;
-	unsigned int id;
-} alsa_version = { 0 };
 
+	pthread_mutex_lock(&mutex);
+	
+	if (alsa_version.string != NULL) {
+		pthread_mutex_unlock(&mutex);
+		return;
+	}
 
-void alsa_version_init(void) {
 	alsa_version.string = snd_asoundlib_version();
 	sscanf(alsa_version.string, "%u.%u.%u.%u",
-				&alsa_version.major,
-				&alsa_version.minor,
-				&alsa_version.subminor,
-				&alsa_version.extra);
-	alsa_version.id = (alsa_version.major << 16) | (alsa_version.minor << 8) | (alsa_version.subminor);
-
+				&major,
+				&minor,
+				&subminor,
+				&extra);
+	alsa_version.id = major << 16 | minor << 8 | subminor;
+	pthread_mutex_unlock(&mutex);	
 }
 
 unsigned int alsa_version_id(void) {
+	if (alsa_version.string == NULL)
+		alsa_version_init();
 	return alsa_version.id;
 }
 
 const char *alsa_version_string(void) {
+	if (alsa_version.string == NULL)
+		alsa_version_init();
 	return alsa_version.string;
 }
