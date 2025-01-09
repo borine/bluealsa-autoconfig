@@ -133,6 +133,16 @@ Some practical example scripts are included in the
 
 ## Installation
 
+### Build dependencies
+
+* [meson](https://mesonbuild.com/)
+* [BlueZ 5](https://www.bluez.org/)
+* [alsa-lib](https://www.alsa-project.org/)
+* [D-Bus](https://www.freedesktop.org/wiki/Software/dbus/)
+* [Python docutils](https://www.docutils.org/README.html) (For manual pages only)
+
+### Build command sequence
+
 ```
 meson setup builddir
 cd builddir
