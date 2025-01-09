@@ -522,11 +522,12 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 		h = h->next;
 	}
 	while (d != NULL) {
-		fprintf(file, "namehint.ctl._bluealsa%u \"bluealsa:DEV=%s,SRV=%s%s%s\n"
+		fprintf(file, "namehint.ctl._bluealsa%u \"bluealsa:DEV=%s%s%s%s%s\n"
 				"Bluetooth Audio Control Device\"\n",
 			d->id,
 			d->hex_addr,
-			d->service,
+			with_service ? ",SRV=" : "",
+			with_service ? d->service : "",
 			desc_separator,
 			d->alias);
 		d = d->next;
