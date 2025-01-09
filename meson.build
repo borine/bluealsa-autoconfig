@@ -1,4 +1,4 @@
-project('bluealsa-autoconfig', 'c', version: '0.4.4', license: 'MIT')
+project('bluealsa-autoconfig', 'c', version: '0.4.5', license: 'MIT')
 
 prefix = get_option('prefix')
 assert(prefix.startswith('/'), 'Prefix is not absolute: "@0@"'.format(prefix))
