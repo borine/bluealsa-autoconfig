@@ -28,8 +28,8 @@ RestrictNamespaces=true
 RestrictRealtime=true
 RestrictSUIDSGID=true
 SystemCallArchitectures=native
-SystemCallFilter=@system-service
 SystemCallFilter=~@resources
+SystemCallFilter=@system-service
 
 [Install]
 WantedBy=default.target
