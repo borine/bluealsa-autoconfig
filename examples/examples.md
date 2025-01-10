@@ -4,8 +4,7 @@
 
 ### 51 Notify
 
-An agent script must be a "one-shot" program that does not block or linger. Each invocation is a new process. The simplest ones merely update a file or send some message in response to one BlueALSA PCM event. The first example is a very simple program to generate a desktop notification whenever a BlueALSA PCM connects or disconnects. It uses the GTK+ dialog
-tool `zenity` to create the notification. To try this example, either copy (or symlink) the file [51-notify.sh](./51-notify.sh) to your `bluealsa-agent` scripts directory, ensure it has execute permission (`chmod a+x 51-notify.sh`), then re-start the `bluealsa-agent` service.
+An agent script must be a "one-shot" program that does not block or linger. Each invocation is a new process. The simplest ones merely update a file or send some message in response to one BlueALSA PCM event. The first example is a very simple program to generate a desktop notification whenever a BlueALSA PCM connects or disconnects. It uses the utility `notify-send` to create the notification. To try this example, either copy (or symlink) the file [51-notify.sh](./51-notify.sh) to your `bluealsa-agent` commands directory, ensure it has execute permission (`chmod a+x 51-notify.sh`), then re-start the `bluealsa-agent` service.
 
 ## Client-Server
 
