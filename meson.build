@@ -60,7 +60,7 @@ agent = build_target(
 )
 
 alsa_plugin_dir = join_paths(
-	alsa_dep.get_pkgconfig_variable('libdir'),
+	alsa_dep.get_variable(pkgconfig : 'libdir'),
 	'alsa-lib'
 )
 
@@ -85,7 +85,8 @@ install_data(
 
 subdir('systemd')
 
-completionsdir = bashcompletion.get_pkgconfig_variable('completionsdir')
+completionsdir = bashcompletion.get_variable(pkgconfig : 'completionsdir')
+
 install_data(
 	'completion',
 	rename: 'bluealsa-autoconfig',
