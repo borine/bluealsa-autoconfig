@@ -33,7 +33,7 @@ OPTIONS
 
 -B NAME, --dbus=NAME
     BlueALSA service name suffix. This option can be given more than once to
-    add support for multiple ``bluealsa(8)`` service instances. The default
+    add support for multiple ``bluealsad(8)`` service instances. The default
     service **org.bluealsa** is always included. For example, the following
     will respond to events from **org.bluealsa**, **org.bluealsa.sink** and
     **org.bluealsa.source**:
@@ -41,7 +41,7 @@ OPTIONS
 
         bluealsa-agent -B sink -B source <PATH-TO-COMMAND>
 
-    For more information see the ``--dbus`` option of the ``bluealsa(8)``
+    For more information see the ``--dbus`` option of the ``bluealsad(8)``
     service daemon.
 
 -p PROFILE, --profile=PROFILE

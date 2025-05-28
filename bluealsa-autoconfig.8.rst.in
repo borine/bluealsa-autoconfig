@@ -35,7 +35,7 @@ OPTIONS
 
 -B NAME, --dbus=NAME
     BlueALSA service name suffix. This option can be given more than once to
-    add support for multiple ``bluealsa(8)`` service instances. The default
+    add support for multiple ``bluealsad(8)`` service instances. The default
     service **org.bluealsa** is always included. For example, the following
     will include into the ALSA configuration PCMs from **org.bluealsa**,
     **org.bluealsa.sink** and **org.bluealsa.source**:
@@ -43,7 +43,7 @@ OPTIONS
 
         bluealsa-autoconfig -B sink -B source
 
-    For more information see the ``--dbus`` option of the ``bluealsa(8)``
+    For more information see the ``--dbus`` option of the ``bluealsad(8)``
     service daemon.
 
 -u, --udev
