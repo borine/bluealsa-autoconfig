@@ -8,6 +8,10 @@ Bluetooth audio user experience when using BlueALSA. See
 [The bluez-alsa project](https://github.com/arkq/bluez-alsa) for more
 information on BlueALSA.
 
+> [!Important]
+> This version supports only BlueALSA 4.3.1 or earlier, it is not
+> compatible with the latest BlueALSA development sources.
+
 ## bluealsa-autoconfig
 
 `bluealsa-autoconfig` is a simple program to add and remove ALSA configuration
@@ -128,6 +132,16 @@ Some practical example scripts are included in the
 [examples directory](./examples/examples.md)
 
 ## Installation
+
+### Build dependencies
+
+* [meson](https://mesonbuild.com/)
+* [BlueZ 5](https://www.bluez.org/)
+* [alsa-lib](https://www.alsa-project.org/)
+* [D-Bus](https://www.freedesktop.org/wiki/Software/dbus/)
+* [Python docutils](https://www.docutils.org/README.html) (For manual pages only)
+
+### Build command sequence
 
 ```
 meson setup builddir
