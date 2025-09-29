@@ -10,6 +10,7 @@
 # include <config.h>
 #endif
 
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <getopt.h>
@@ -163,11 +164,16 @@ static struct bluealsa_pcm_data *bluealsa_agent_add_pcm_path(
 	return pcm_data;
 }
 
+static void bluealsa_agent_remove_pcm_data(size_t n) {
+	assert(n < agent.pcms.count);
+	if (--agent.pcms.count > 0)
+		memcpy(&agent.pcms.data[n], &agent.pcms.data[agent.pcms.count], sizeof(*agent.pcms.data));
+}
+
 static bool bluealsa_agent_remove_pcm_path(const char *path) {
 	for (size_t n = 0; n < agent.pcms.count; n++) {
 		if (strcmp(path, agent.pcms.data[n].path) == 0) {
-			if (--agent.pcms.count > 0)
-				memcpy(&agent.pcms.data[n], &agent.pcms.data[agent.pcms.count], sizeof(*agent.pcms.data));
+			bluealsa_agent_remove_pcm_data(n);
 			return true;
 		}
 	}
@@ -197,7 +203,7 @@ static void bluealsa_agent_run_prog(size_t prog_num, const char *event, const ch
 			sigemptyset(&mask);
 			sigaddset(&mask, SIGHUP);
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
-			
+
 			execv(prog, argv);
 			error("Failed to execute %s (%s)", prog, strerror(errno));
 			exit(1);
@@ -229,7 +235,7 @@ static void bluealsa_agent_get_progs(const char *program) {
 	DIR *dir;
 	struct dirent *entry;
 	char path[PATH_MAX];
-	const size_t offset = strlen(program) + 1; 
+	const size_t offset = strlen(program) + 1;
 	size_t capacity = 10;
 
 	if (stat(program, &statbuf) != 0) {
@@ -238,7 +244,7 @@ static void bluealsa_agent_get_progs(const char *program) {
 	}
 
 	agent.program = program;
-	
+
 	if (S_ISDIR(statbuf.st_mode)) {
 		if ((dir = opendir(program)) == NULL) {
 			error("Cannot read directory '%s' (%s)", program, strerror(errno));
@@ -306,6 +312,15 @@ static size_t bluealsa_agent_init_envvars(envvars_t *envvars, const struct bluea
 	snprintf(envvars->string[n++], 256, "BLUEALSA_PCM_PROPERTY_ALSA_ID=%s", pcm_data->alsa_id);
 	envvars->count = n;
 	return n;
+}
+
+static void bluealsa_agent_terminated(void) {
+	for (size_t n = 0; n < agent.pcms.count; n++) {
+		envvars_t envvars;
+		struct bluealsa_pcm_data *pcm_data = &agent.pcms.data[n];
+		bluealsa_agent_init_envvars(&envvars, pcm_data);
+		bluealsa_agent_run_progs("remove", pcm_data->path, &envvars);
+	}
 }
 
 static void bluealsa_agent_pcm_added(const struct ba_pcm *pcm, const char *service, void *data) {
@@ -610,43 +625,50 @@ int main(int argc, char *argv[]) {
 		error("signalfd");
 		exit(EXIT_FAILURE);
 	}
-	
+
 	struct pollfd pfds[11];
 	nfds_t pfds_len = ARRAYSIZE(pfds);
 	pfds[0].fd = sfd;
 	pfds[0].events = POLLIN;
 
+	int exit_status = EXIT_SUCCESS;
 	while (!terminated) {
 		int res;
 		nfds_t temp = pfds_len - 1;
 		if (bluealsa_client_poll_fds(agent.client, pfds + 1, &temp) < 0) {
 			error("Couldn't get D-Bus connection file descriptors");
-			return EXIT_FAILURE;
+			exit_status = EXIT_FAILURE;
+			break;
 		}
 		pfds_len = temp + 1;
-		
+
 		if ((res = poll(pfds, pfds_len, -1)) == -1 &&
 				errno == EINTR)
 			continue;
 
-		if (res == -1)
+		if (res == -1) {
+			error("poll() failure: %d (%s)", errno, strerror(errno));
+			exit_status = EXIT_FAILURE;
 			break;
+		}
 
 		if (pfds[0].revents == POLLIN) {
 			struct signalfd_siginfo fdsi;
 			ssize_t s = read(pfds[0].fd, &fdsi, sizeof(fdsi));
 			if (s != sizeof(fdsi) || fdsi.ssi_signo != SIGHUP) {
 				error("read signalfd");
-				return EXIT_FAILURE;
+				exit_status = EXIT_FAILURE;
+				break;
 			}
 			bluealsa_agent_reload();
 			continue;
 		}
-		
+
 		bluealsa_client_poll_dispatch(agent.client, pfds + 1, pfds_len - 1);
 	}
 
+	bluealsa_agent_terminated();
 	bluealsa_client_close(agent.client);
 
-	return EXIT_SUCCESS;
+	return exit_status;
 }

@@ -6,7 +6,7 @@ bluealsa-agent
 BlueALSA event handler helper utility
 -------------------------------------
 
-:Date: August 2024
+:Date: September 2025
 :Manual section: 8
 :Manual group: System Manager's Manual
 :Version: @VERSION@
@@ -81,8 +81,10 @@ before starting the next; only one event at a time will be processed.
 
 If COMMAND is a file then **bluealsa-agent** does not wait for it to complete;
 so it is possible that it may be invoked again by the next event before the
-previous invocation has completed. In either case each executable file is
-invoked by **bluealsa-agent** with two arguments as:
+previous invocation has completed.
+
+In either case each executable file is invoked by **bluealsa-agent** with two
+arguments as:
 
     COMMAND *EVENT* *PCM-PATH*
 
@@ -145,14 +147,14 @@ These variables are set for all events:
 
 When *--status* is used, then additional environment variables are also set
 for the "added" and "update" events as determined by the *PROPLIST*.
- 
+
   ``BLUEALSA_PCM_PROPERTY_RUNNING``
     ``true`` if the PCM is running (i.e. when the underlying Bluetooth transport
     is acquired and able to transfer audio samples), ``false`` otherwise.
 
   ``BLUEALSA_PCM_PROPERTY_SOFTVOL``
     ``true`` when the BlueALSA "SoftVolume" property is enabled for this PCM.
-    See ``bluealsa(8)`` for more information.
+    See ``bluealsad(8)`` for more information.
 
   ``BLUEALSA_PCM_PROPERTY_CLIENT_DELAY``
     The current client delay adjustment, in units of 1/10 millisecond.
@@ -185,9 +187,13 @@ environment variable is set:
 
       SOFTVOL
 
-For compatibility with older versions, the word "SAMPLING" is also included when
-the rate has changed. Use of this term is deprecated and will be discontinued in
-a future release.
+For compatibility with older versions, the word "SAMPLING" is also included
+when the rate has changed. Use of this term is deprecated and will be
+discontinued in a future release.
+
+When the **bluealsa-agent** service is started it invokes the "PCM added" event
+for all connected BlueALSA PCMs, and when it is stopped then it invokes the
+"PCM removed" event for all connected BlueALSA PCMs.
 
 SEE ALSO
 ========
