@@ -97,7 +97,6 @@ typedef struct {
 } envvars_t;
 
 static struct bluealsa_agent agent = { 0 };
-static sig_atomic_t terminated = 0;
 
 static bool bluealsa_agent_filter(const struct ba_pcm *pcm) {
 	const bool profile_match = (agent.profile == PROFILE_ALL) ||
@@ -200,8 +199,7 @@ static void bluealsa_agent_run_prog(size_t prog_num, const char *event, const ch
 				putenv(envp->string[n]);
 
 			sigset_t mask;
-			sigemptyset(&mask);
-			sigaddset(&mask, SIGHUP);
+			sigfillset(&mask);
 			sigprocmask(SIG_UNBLOCK, &mask, NULL);
 
 			execv(prog, argv);
@@ -460,11 +458,6 @@ static int bluealsa_agent_init_client() {
 	return 0;
 }
 
-static void bluealsa_agent_terminate(int sig) {
-	(void) sig;
-	terminated = 1;
-}
-
 static void bluealsa_agent_reload(void) {
 	if (!agent.program_is_dir)
 		return;
@@ -609,18 +602,16 @@ int main(int argc, char *argv[]) {
 	}
 	free(services);
 
-	struct sigaction sigact = { .sa_handler = bluealsa_agent_terminate };
-	sigaction(SIGTERM, &sigact, NULL);
-	sigaction(SIGINT, &sigact, NULL);
-
 	sigset_t mask;
 	sigemptyset(&mask);
+	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGHUP);
 	if (sigprocmask(SIG_BLOCK, &mask, NULL) == -1) {
 		error("sigprocmask");
 		exit(EXIT_FAILURE);
 	}
-	int sfd = signalfd(-1, &mask, 0);
+	int sfd = signalfd(-1, &mask, SFD_CLOEXEC);
 	if (sfd == -1) {
 		error("signalfd");
 		exit(EXIT_FAILURE);
@@ -632,6 +623,7 @@ int main(int argc, char *argv[]) {
 	pfds[0].events = POLLIN;
 
 	int exit_status = EXIT_SUCCESS;
+	bool terminated = false;
 	while (!terminated) {
 		int res;
 		nfds_t temp = pfds_len - 1;
@@ -655,13 +647,25 @@ int main(int argc, char *argv[]) {
 		if (pfds[0].revents == POLLIN) {
 			struct signalfd_siginfo fdsi;
 			ssize_t s = read(pfds[0].fd, &fdsi, sizeof(fdsi));
-			if (s != sizeof(fdsi) || fdsi.ssi_signo != SIGHUP) {
+			if (s != sizeof(fdsi)) {
 				error("read signalfd");
 				exit_status = EXIT_FAILURE;
 				break;
 			}
-			bluealsa_agent_reload();
-			continue;
+			switch (fdsi.ssi_signo) {
+				case SIGTERM:
+					info("Terminating on signal SIGTERM");
+					terminated = true;
+					continue;
+				case SIGINT:
+					info("Terminating on signal SIGINT");
+					terminated = true;
+					continue;
+				case SIGHUP:
+					debug("Reloading commands on signal SIGHUP");
+					bluealsa_agent_reload();
+					break;
+			}
 		}
 
 		bluealsa_client_poll_dispatch(agent.client, pfds + 1, pfds_len - 1);
