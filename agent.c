@@ -1,9 +1,7 @@
 /*
- * bluealsa-agent - agent.c
- * Copyright (c) 2024 @borine (https://github.com/borine/)
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * bluealsa-autoconfig - agent.c
+ * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-License-Identifier: MIT
  */
 
 #if HAVE_CONFIG_H

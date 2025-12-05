@@ -1,9 +1,7 @@
 /*
  * bluealsa-autoconfig - bluealsa-client.h
- * Copyright (c) 2023-2024 @borine (https://github.com/borine/)
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-License-Identifier: MIT
  */
 
 #ifndef BLUEALSA_CLIENT_H

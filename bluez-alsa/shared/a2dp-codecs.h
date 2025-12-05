@@ -1,11 +1,7 @@
 /*
  * BlueALSA - a2dp-codecs.h
- * Copyright (C) 2016-2024 Arkadiusz Bokowy
- *
- * This file is a part of bluez-alsa.
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2016-2025 BlueALSA developers
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once
@@ -488,6 +484,39 @@ typedef struct a2dp_aptx_hd {
 #define APTX_AD_VENDOR_ID               BT_COMPID_QUALCOMM_TECH
 #define APTX_AD_CODEC_ID                0x00AD
 
+#define APTX_AD_CHANNEL_MODE_MONO             (1 << 0)
+#define APTX_AD_CHANNEL_MODE_STEREO           (1 << 1)
+#define APTX_AD_CHANNEL_MODE_TWS              (1 << 2)
+#define APTX_AD_CHANNEL_MODE_JOINT_STEREO     (1 << 3)
+#define APTX_AD_CHANNEL_MODE_TWS_MONO         (1 << 4)
+
+#define APTX_AD_SAMPLING_FREQ_44100     (1 << 0)
+#define APTX_AD_SAMPLING_FREQ_48000     (1 << 1)
+#define APTX_AD_SAMPLING_FREQ_88000     (1 << 2)
+#define APTX_AD_SAMPLING_FREQ_192000    (1 << 3)
+
+typedef struct {
+	a2dp_vendor_info_t info;
+#if __BYTE_ORDER == __BIG_ENDIAN
+	uint8_t sampling_freq:5;
+	uint8_t rfa1:3;
+	uint8_t rfa2:3;
+	uint8_t channel_mode:5;
+#else
+	uint8_t rfa1:3;
+	uint8_t sampling_freq:5;
+	uint8_t channel_mode:5;
+	uint8_t rfa2:3;
+#endif
+	uint8_t ttp_ll_low;
+	uint8_t ttp_ll_high;
+	uint8_t ttp_hq_low;
+	uint8_t ttp_hq_high;
+	uint8_t ttp_tws_low;
+	uint8_t ttp_tws_high;
+	uint8_t eoc[3];
+} __attribute__ ((packed)) a2dp_aptx_ad_t;
+
 #define LC3PLUS_VENDOR_ID               BT_COMPID_FRAUNHOFER_IIS
 #define LC3PLUS_CODEC_ID                0x0001
 
@@ -571,7 +600,7 @@ typedef struct a2dp_ldac {
 
 #define LHDC_MAX_BITRATE_400K           (1 << 1)
 #define LHDC_MAX_BITRATE_500K           (1 << 0)
-#define LHDC_MAX_BITRATE_900K           0x00
+#define LHDC_MAX_BITRATE_900K           (0)
 
 #define LHDC_CH_SPLIT_MODE_NONE         (1 << 0)
 #define LHDC_CH_SPLIT_MODE_TWS          (1 << 1)
@@ -694,7 +723,9 @@ typedef struct a2dp_lhdc_v5 {
 #define OPUS_VENDOR_ID                  BT_COMPID_GOOGLE
 #define OPUS_CODEC_ID                   0x0001
 
-#define OPUS_SAMPLING_FREQ_48000        (1 << 0)
+#define OPUS_SAMPLING_FREQ_48000        (1 << 2)
+#define OPUS_SAMPLING_FREQ_24000        (1 << 1)
+#define OPUS_SAMPLING_FREQ_16000        (1 << 0)
 
 #define OPUS_FRAME_DURATION_100         (1 << 0)
 #define OPUS_FRAME_DURATION_200         (1 << 1)
@@ -706,15 +737,13 @@ typedef struct a2dp_lhdc_v5 {
 typedef struct a2dp_opus {
 	a2dp_vendor_info_t info;
 #if __BYTE_ORDER == __BIG_ENDIAN
-	uint8_t rfa:2;
-	uint8_t sampling_freq:1;
+	uint8_t sampling_freq:3;
 	uint8_t frame_duration:2;
 	uint8_t channel_mode:3;
 #else
 	uint8_t channel_mode:3;
 	uint8_t frame_duration:2;
-	uint8_t sampling_freq:1;
-	uint8_t rfa:2;
+	uint8_t sampling_freq:3;
 #endif
 } __attribute__ ((packed)) a2dp_opus_t;
 
@@ -764,11 +793,12 @@ typedef union a2dp {
 	a2dp_aac_t aac;
 	a2dp_usac_t usac;
 	a2dp_atrac_t atrac;
-	a2dp_aptx_t aptx;
 	a2dp_faststream_t faststream;
+	a2dp_aptx_t aptx;
+	a2dp_aptx_ad_t aptx_ad;
+	a2dp_aptx_hd_t aptx_hd;
 	a2dp_aptx_ll_t aptx_ll;
 	a2dp_aptx_ll_new_t aptx_ll_new;
-	a2dp_aptx_hd_t aptx_hd;
 	a2dp_lc3plus_t lc3plus;
 	a2dp_ldac_t ldac;
 	a2dp_lhdc_v1_t lhdc_v1;
@@ -780,6 +810,7 @@ typedef union a2dp {
 } a2dp_t;
 
 uint32_t a2dp_codecs_codec_id_from_string(const char *alias);
+uint32_t a2dp_codecs_vendor_codec_id(const a2dp_vendor_info_t *info);
 const char *a2dp_codecs_codec_id_to_string(uint32_t codec_id);
 const char *a2dp_codecs_get_canonical_name(const char *alias);
 

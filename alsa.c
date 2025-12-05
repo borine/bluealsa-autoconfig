@@ -1,9 +1,7 @@
 /*
  * bluealsa-autoconfig - alsa.c
- * Copyright (c) 2023 @borine (https://github.com/borine/)
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-License-Identifier: MIT
  */
 
 #include <alsa/asoundlib.h>
@@ -27,7 +25,7 @@ void alsa_version_init(void) {
 	unsigned int extra;
 
 	pthread_mutex_lock(&mutex);
-	
+
 	if (alsa_version.string != NULL) {
 		pthread_mutex_unlock(&mutex);
 		return;
@@ -40,7 +38,7 @@ void alsa_version_init(void) {
 				&subminor,
 				&extra);
 	alsa_version.id = major << 16 | minor << 8 | subminor;
-	pthread_mutex_unlock(&mutex);	
+	pthread_mutex_unlock(&mutex);
 }
 
 unsigned int alsa_version_id(void) {

@@ -1,3 +1,7 @@
+# bluealsa-autoconfig - meson.build
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
+
 project('bluealsa-autoconfig', 'c', version: '0.4.5', license: 'MIT')
 
 prefix = get_option('prefix')

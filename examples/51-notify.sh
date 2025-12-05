@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
+
 title="Bluetooth Audio"
 case "$BLUEALSA_PCM_PROPERTY_MODE" in
 	sink) title="$title Output" ;;

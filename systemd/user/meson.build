@@ -1,3 +1,7 @@
+# bluealsa-autoconfig - systemd/user/meson.build
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
+
 
 conf_data = configuration_data()
 conf_data.set('bindir', bindir)

@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+SPDX-License-Identifier: MIT
+-->
+
 # BlueALSA ALSA Configuration Service and PCM Event Handler Service
 
 ## Introduction

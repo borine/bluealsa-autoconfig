@@ -1,3 +1,6 @@
+# bluealsa-autoconfig - systemd/system/meson.build
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
 
 configure_file(
 	input : autoconfig_unit_template,
@@ -14,7 +17,7 @@ conf_data.set('ENVIRONMENT_FILE', '')
 conf_data.set('ARGS', '%S/bluealsa-agent/commands')
 conf_data.set('USER', 'User=bluealsa-agent')
 conf_data.set('GROUP', 'Group=audio')
-conf_data.set('SYSTEM_DIRECTIVES', 
+conf_data.set('SYSTEM_DIRECTIVES',
 '''CapabilityBoundingSet=
 ProtectClock=true
 ProtectHostname=true

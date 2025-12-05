@@ -1,9 +1,7 @@
 /*
  * bluealsa-autoconfig - bluealsa-client.c
- * Copyright (c) 2023-2024 @borine (https://github.com/borine/)
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-License-Identifier: MIT
  */
 
 #include "bluealsa-client.h"
@@ -341,7 +339,7 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 			strncpy(props->channel_map[i], data[i], sizeof(props->channel_map[i]) - 1);
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_CHANNEL_MAP;
 	}
-	
+
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 

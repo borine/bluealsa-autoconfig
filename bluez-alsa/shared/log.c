@@ -1,14 +1,10 @@
 /*
  * BlueALSA - log.c
- * Copyright (c) 2016-2024 Arkadiusz Bokowy
- *
- * This file is a part of bluez-alsa.
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2016-2025 BlueALSA developers
+ * SPDX-License-Identifier: MIT
  */
 
-#include "shared/log.h"
+#include "log.h"
 
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -32,8 +28,8 @@
 # include <execinfo.h>
 #endif
 
-#include "shared/defs.h"
-#include "shared/rt.h"
+#include "defs.h"
+#include "rt.h"
 
 /* internal logging identifier */
 static char *_ident = NULL;

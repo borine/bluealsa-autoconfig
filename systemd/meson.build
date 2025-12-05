@@ -1,3 +1,6 @@
+# bluealsa-autoconfig - systemd/meson.build
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
 
 unitdir = join_paths(prefix, 'lib', 'systemd')
 

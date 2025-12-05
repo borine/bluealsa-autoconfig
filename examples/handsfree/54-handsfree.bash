@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
+
 [[ "$BLUEALSA_PCM_PROPERTY_MODE" == "source" ]] || exit
 [[ "$BLUEALSA_PCM_PROPERTY_TRANSPORT" =~ (HFP-HF|HSP-HS) ]] || exit
 [[ "${BLUEALSA_PCM_PROPERTY_CODEC,,}" =~ (cvsd|lc3-swb|msbc) ]] || exit

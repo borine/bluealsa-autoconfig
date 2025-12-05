@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
+
 SPK_PCM="hw:0,0"
 SPK_RATE="48000"
 SPK_CHANNELS=2

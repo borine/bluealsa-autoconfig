@@ -1,14 +1,10 @@
 /*
  * BlueALSA - dbus-client.c
- * Copyright (c) 2016-2024 Arkadiusz Bokowy
- *
- * This file is a part of bluez-alsa.
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2016-2025 BlueALSA developers
+ * SPDX-License-Identifier: MIT
  */
 
-#include "shared/dbus-client.h"
+#include "dbus-client.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -16,7 +12,7 @@
 #include <string.h>
 #include <sys/param.h>
 
-#include "shared/defs.h"
+#include "defs.h"
 
 static dbus_bool_t ba_dbus_watch_add(DBusWatch *watch, void *data) {
 	struct ba_dbus_ctx *ctx = (struct ba_dbus_ctx *)data;

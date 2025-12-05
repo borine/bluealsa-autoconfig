@@ -1,2 +1,6 @@
+# bluealsa-autoconfig - meson_options.txt
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
+
 option('doc', type: 'boolean', value: false, description: 'Build manual pages')
 

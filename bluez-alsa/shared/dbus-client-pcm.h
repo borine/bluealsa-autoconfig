@@ -1,11 +1,7 @@
 /*
  * BlueALSA - dbus-client-pcm.h
- * Copyright (c) 2016-2024 Arkadiusz Bokowy
- *
- * This file is a part of bluez-alsa.
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2016-2025 BlueALSA developers
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once
@@ -23,7 +19,7 @@
 #include <bluetooth/bluetooth.h>
 #include <dbus/dbus.h>
 
-#include "shared/dbus-client.h"
+#include "dbus-client.h"
 
 #define BA_PCM_TRANSPORT_NONE        (0)
 #define BA_PCM_TRANSPORT_A2DP_SOURCE (1 << 0)

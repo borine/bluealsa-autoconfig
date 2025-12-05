@@ -1,11 +1,7 @@
 /*
  * BlueALSA - rt.h
- * Copyright (c) 2016-2024 Arkadiusz Bokowy
- *
- * This file is a part of bluez-alsa.
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2016-2025 BlueALSA developers
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once
@@ -16,6 +12,7 @@
 # include <config.h>
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
 
@@ -41,7 +38,7 @@
 #endif
 
 /**
- * Structure used for time synchronization.
+ * Structure used for rate synchronization.
  *
  * With the size of the frame counter being 32 bits, it is possible to track
  * up to ~24 hours, with the sample rate of 48 kHz. If it is insufficient,
@@ -58,34 +55,19 @@ struct asrsync {
 	/* transferred frames since ts0 */
 	uint32_t frames;
 
-	/* time spent outside of the sync function */
-	struct timespec ts_busy;
-	/* If the asrsync_sync() returns a positive value, then this variable
-	 * contains an amount of time used for synchronization. Otherwise, it
-	 * contains an overdue time - synchronization was not possible due to
-	 * too much time spent outside of the sync function. */
+	/* Indicate whether the synchronization was required. */
+	bool synced;
+	/* If synchronization was required this variable contains an amount of
+	 * time used for the synchronization. Otherwise, it contains an overdue
+	 * time - synchronization was not possible due to too much time spent
+	 * outside of the sync function. */
 	struct timespec ts_idle;
 
 };
 
-/**
- * Start (initialize) time synchronization.
- *
- * @param asrs Pointer to the time synchronization structure.
- * @param sr Synchronization sample rate. */
-#define asrsync_init(asrs, sr) do { \
-		(asrs)->rate = sr; \
-		gettimestamp(&(asrs)->ts0); \
-		(asrs)->ts = (asrs)->ts0; \
-		(asrs)->frames = 0; \
-	} while (0)
-
-int asrsync_sync(struct asrsync *asrs, unsigned int frames);
-
-/**
- * Get the number of microseconds spent outside of the sync function. */
-#define asrsync_get_busy_usec(asrs) \
-	((asrs)->ts_busy.tv_nsec / 1000)
+void asrsync_init(struct asrsync *asrs, unsigned int rate);
+void asrsync_sync(struct asrsync *asrs, unsigned int frames);
+unsigned int asrsync_get_dms_since_last_sync(const struct asrsync *asrs);
 
 /**
  * Get system monotonic time-stamp.
@@ -106,6 +88,12 @@ int asrsync_sync(struct asrsync *asrs, unsigned int frames);
  * @param ts Address to the timespec structure.
  * @return Time in milliseconds. */
 #define timespec2ms(ts) ((ts)->tv_sec * 1000 + (ts)->tv_nsec / 1000000)
+
+/**
+ * Check whether the time defined by the timespec structure is zero. */
+static inline bool is_timespec_zero(const struct timespec *ts) {
+	return ts->tv_sec == 0 && ts->tv_nsec == 0;
+}
 
 int difftimespec(
 		const struct timespec *ts1,

@@ -1,9 +1,7 @@
 /*
  * bluealsa-autoconfig - namehint.c
- * Copyright (c) 2023 @borine (https://github.com/borine/)
- *
- * This project is licensed under the terms of the MIT license.
- *
+ * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-License-Identifier: MIT
  */
 
 #include <alsa/asoundlib.h>
@@ -502,7 +500,7 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 	struct bluealsa_namehint_device *d = hint->devices;
 	unsigned int alsa_version = alsa_version_id();
 	const char *desc_separator = alsa_version >= 0x010203 ? "|" : "|DESC";
-			
+
 	while (h != NULL) {
 		char description[256];
 		int ret = bluealsa_namehint_hint_expand_description(h, pattern, description, 256);

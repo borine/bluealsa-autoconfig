@@ -1,3 +1,7 @@
+# bluealsa-autoconfig - bluez-alsa/meson.build
+# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
+
 bluez_alsa_sources = [
 	'dbus.c',
 	'shared/a2dp-codecs.c',
