@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
 # SPDX-License-Identifier: MIT
 
-project('bluealsa-autoconfig', 'c', version: '0.5.0', license: 'MIT')
+project('bluealsa-autoconfig', 'c', version: '0.5.1', license: 'MIT')
 
 prefix = get_option('prefix')
 assert(prefix.startswith('/'), 'Prefix is not absolute: "@0@"'.format(prefix))
