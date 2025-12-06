@@ -133,7 +133,7 @@ and is intended to be used as a user service.
 
 See the [manual page](./bluealsa-agent.8.rst.in) for full details.
 
-Some practical example scripts are included in the
+Some practical example command scripts are included in the
 [examples directory](./examples/examples.md)
 
 ## Installation
@@ -150,9 +150,8 @@ Some practical example scripts are included in the
 
 ```
 meson setup builddir
-cd builddir
-meson compile
-sudo meson install
+meson compile -C builddir
+sudo meson install -C builddir
 ```
 
 To include the manual pages, the application `rst2man` from the `docutils`
