@@ -2,17 +2,18 @@
 # SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
 # SPDX-License-Identifier: MIT
 
-project('bluealsa-autoconfig', 'c', version: '0.4.5', license: 'MIT')
+project('bluealsa-autoconfig', 'c', version: '0.5.0', license: 'MIT')
 
 prefix = get_option('prefix')
 assert(prefix.startswith('/'), 'Prefix is not absolute: "@0@"'.format(prefix))
 
 bashcompletion = dependency('bash-completion', required: false)
 
-bindir = join_paths(prefix, get_option('bindir'))
-mandir = join_paths(prefix, get_option('mandir'))
-docdir = join_paths(prefix, get_option('datadir'), 'doc')
+bindir = prefix /  get_option('bindir')
+mandir = prefix / get_option('mandir')
+docdir = prefix / get_option('datadir') / 'doc'
 alsaconfdir = '/etc/alsa/conf.d'
+alsadatadir = '/usr/share/alsa/alsa.conf.d'
 
 conf_data = configuration_data()
 conf_data.set('prefix', prefix)
@@ -63,10 +64,7 @@ agent = build_target(
 	install_dir: bindir,
 )
 
-alsa_plugin_dir = join_paths(
-	alsa_dep.get_variable(pkgconfig : 'libdir'),
-	'alsa-lib'
-)
+alsa_plugin_dir = alsa_dep.get_variable(pkgconfig : 'libdir') / 'alsa-lib'
 
 asound_module_sources = [
 	'bluealsa-hook.c',
@@ -83,8 +81,14 @@ asound_module = shared_library(
 
 install_data(
 	'21-bluealsa-autoconfig.conf',
-	install_dir: alsaconfdir,
+	install_dir: alsadatadir,
 	install_mode: ['rw-r--r--', 'root', 'root']
+)
+
+install_symlink(
+	'21-bluealsa-autoconfig.conf',
+	install_dir : alsaconfdir,
+	pointing_to : alsadatadir / '21-bluealsa-autoconfig.conf',
 )
 
 subdir('systemd')
@@ -96,9 +100,12 @@ install_data(
 	rename: 'bluealsa-autoconfig',
 	install_dir: completionsdir,
 )
-dst = join_paths(completionsdir, 'bluealsa-agent')
-cmd = 'ln -fs @0@ $DESTDIR@1@'.format('bluealsa-autoconfig', dst)
-meson.add_install_script('sh', '-c', cmd)
+
+install_symlink(
+	'bluealsa-agent',
+	install_dir : completionsdir,
+	pointing_to : 'bluealsa-autoconfig',
+)
 
 if get_option('doc')
     autoconf_manual_source = configure_file(
@@ -113,7 +120,7 @@ if get_option('doc')
 	    command: ['rst2man', '@INPUT@', '@OUTPUT@'],
         build_by_default: true,
         install: true,
-        install_dir: join_paths(mandir, 'man8'),
+        install_dir: mandir / 'man8',
     )
     agent_manual_source = configure_file(
         input: 'bluealsa-agent.8.rst.in',
@@ -127,10 +134,10 @@ if get_option('doc')
 	    command: ['rst2man', '@INPUT@', '@OUTPUT@'],
         build_by_default: true,
         install: true,
-        install_dir: join_paths(mandir, 'man8'),
+        install_dir: mandir / 'man8',
     )
 endif
 install_subdir(
 	'examples',
-	install_dir: join_paths(docdir, 'bluealsa-agent')
+	install_dir: docdir / 'bluealsa-agent'
 )

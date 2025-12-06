@@ -17,6 +17,6 @@ agent_user_unit = configure_file(
 	output : 'bluealsa-agent.service',
 	configuration : conf_data,
 	install: true,
-	install_dir: join_paths(unitdir, 'user'),
+	install_dir: unitdir / 'user',
 )
 

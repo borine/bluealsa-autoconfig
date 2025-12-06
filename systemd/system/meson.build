@@ -7,7 +7,7 @@ configure_file(
 	output : 'bluealsa-autoconfig.service',
 	configuration : conf_data,
 	install: true,
-	install_dir: join_paths(unitdir, 'system'),
+	install_dir: unitdir / 'system',
 )
 
 conf_data = configuration_data()
@@ -28,6 +28,6 @@ agent_system_unit = configure_file(
 	output : 'bluealsa-agent.service',
 	configuration : conf_data,
 	install: true,
-	install_dir: join_paths(unitdir, 'system'),
+	install_dir: unitdir / 'system',
 )
 
