@@ -1,6 +1,6 @@
 /*
  * bluealsa-autoconfig - autoconfig.c
- * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
  * SPDX-License-Identifier: MIT
  */
 
@@ -24,18 +24,13 @@
 #include <unistd.h>
 
 #include "alsa.h"
+#include "autoconfig-filepaths.h"
 #include "bluealsa-client.h"
 #include "bluez-alsa/shared/log.h"
 #include "namehint.h"
 #include "version.h"
 
-#define BLUEALSA_AUTOCONFIG_CONFIG_DIR "/var/lib/alsa/conf.d"
-#define BLUEALSA_AUTOCONFIG_CONFIG_FILE BLUEALSA_AUTOCONFIG_CONFIG_DIR "/bluealsa-autoconfig.conf"
-#define BLUEALSA_AUTOCONFIG_TEMP_FILE BLUEALSA_AUTOCONFIG_CONFIG_DIR "/.bluealsa-autoconfig.tmp"
 #define BLUEALSA_AUTOCONFIG_CONFIG_TEMPLATE "%n %p (%c)%lBluetooth Audio %s"
-#define BLUEALSA_AUTOCONFIG_RUN_DIR  "/run/bluealsa-autoconfig"
-#define BLUEALSA_AUTOCONFIG_DEFAULTS_FILE  BLUEALSA_AUTOCONFIG_RUN_DIR "/defaults.conf"
-#define BLUEALSA_AUTOCONFIG_LOCK_FILE  BLUEALSA_AUTOCONFIG_RUN_DIR "/lock"
 
 struct bluealsa_autoconfig {
 	bluealsa_client_t client;

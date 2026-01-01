@@ -1,9 +1,10 @@
 /*
  * bluealsa-autoconfig - bluealsa-client.h
- * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
  * SPDX-License-Identifier: MIT
  */
 
+#pragma once
 #ifndef BLUEALSA_CLIENT_H
 #define BLUEALSA_CLIENT_H
 

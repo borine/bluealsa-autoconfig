@@ -1,4 +1,4 @@
-.. SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+.. SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
 .. SPDX-License-Identifier: MIT
 
 ===================
@@ -9,7 +9,7 @@ bluealsa-autoconfig
 Bluetooth Audio ALSA Configuration Manager
 ------------------------------------------
 
-:Date: March 2023
+:Date: January 2026
 :Manual section: 8
 :Manual group: System Manager's Manual
 :Version: @VERSION@
@@ -165,7 +165,7 @@ Note that this PCM does not re-direct a stream while in use - an application
 will use the definition in place at the time it opens the PCM, and must close
 that PCM then re-open the ``default`` to see any changes.
 
-Three user-definable keys are provided to permit per-user customization of the
+Five user-definable keys are provided to permit per-user customization of the
 default behaviour. A user can define these in the ``~/.asoundrc`` file.
 
 defaults.bluealsa.default.profile
@@ -174,7 +174,7 @@ defaults.bluealsa.default.profile
     value as the ``bluealsa`` PCM default. If, for some reason, the user
     requires the profile for ``pcm.default`` to be different from the one for
     ``pcm.bluealsa``, then the above key can be used. Permitted values
-    are ``a2dp`` or ``sco``.
+    are ``a2dp`` ``asha`` or ``sco``.
 
 defaults.bluealsa.default.stream
     This key determines which stream direction(s) are assigned to BlueALSA PCMs
@@ -184,16 +184,26 @@ defaults.bluealsa.default.stream
     Note that A2DP streams (except SBC ``faststream``) generally have only one
     direction.
 
-defaults.bluealsa.default.fallback
+defaults.bluealsa.default.pcm.fallback
     This key determines which PCM will be used as a fallback for whichever
     stream direction(s) is/are not available as connected BlueALSA PCMs. For
     example to use the second soundcard with its default setup:
     ::
 
-        defaults.bluealsa.default.fallback "sysdefault:CARD=1"
+        defaults.bluealsa.default.pcm.fallback "sysdefault:CARD=1"
 
     The default value is ``sysdefault`` which is normally the system-defined
     default.
+
+defaults.bluealsa.default.pcm.description
+    The hint description to be used by the ``default`` PCM when it is a
+    BlueALSA PCM. By default the description is
+    "Default PCM device (currently BlueALSA)"
+
+defaults.bluealsa.default.pcm.fallback_description
+    The hint description to be used by the ``default`` PCM when it is not a
+    BlueALSA PCM. By default the description is
+    "Default PCM device"
 
 When used with ``alsa-lib`` release 1.2.5 or later, ``bluealsa-autoconfig``
 also creates a ALSA CTL suitable for use as a user's default mixer. This CTL is
@@ -215,6 +225,30 @@ from different devices, then the mixer ``bluealsa.ctl.default`` will be in its
 default mode, and will show controls for **all** connected BlueALSA devices.
 See ``bluealsa-plugins(7)`` for more information on BlueALSA CTL default and
 single-device modes.
+
+Three user-definable keys are provided to permit per-user customization of the
+default behaviour. A user can define these in the ``~/.asoundrc`` file.
+
+defaults.bluealsa.default.ctl.fallback
+    This key determines which CTL will be used as a fallback whenever
+    ``pcm.default`` is not a BlueALSA PCM.
+    For example to use the mixer on the second soundcard:
+    ::
+
+        defaults.bluealsa.default.ctl.fallback "sysdefault:CARD=1"
+
+    The default value is ``sysdefault`` which is normally the system-defined
+    default.
+
+defaults.bluealsa.default.ctl.description
+    The hint description to be used by the ``default`` CTL when it is a
+    BlueALSA mixer. By default the description is
+    "Default control device (currently BlueALSA)"
+
+defaults.bluealsa.default.ctl.fallback_description
+    The hint description to be used by the ``default`` CTL when it is not a
+    BlueALSA mixer. By default the description is
+    "Default control device"
 
 LIBASOUND VERSION DEPENDENCY
 ============================

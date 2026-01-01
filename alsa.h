@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+#pragma once
 #ifndef BLUEALSA_AUTOCONFIG_ALSA_H
 #define BLUEALSA_AUTOCONFIG_ALSA_H
 

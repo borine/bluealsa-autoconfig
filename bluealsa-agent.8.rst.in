@@ -1,4 +1,4 @@
-.. SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+.. SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
 .. SPDX-License-Identifier: MIT
 
 ===================
@@ -9,7 +9,7 @@ bluealsa-agent
 BlueALSA event handler helper utility
 -------------------------------------
 
-:Date: September 2025
+:Date: January 2026
 :Manual section: 8
 :Manual group: System Manager's Manual
 :Version: @VERSION@
@@ -49,17 +49,19 @@ OPTIONS
 
 -p PROFILE, --profile=PROFILE
     Invoke commands only for PCMs having profile *PROFILE*. *PROFILE* may be
-    "a2dp" or "sco". The default is to invoke commands for both profiles.
+    "a2dp", "asha" or "sco". May be given more than once to select multiple
+    profiles. If not given, The default is to invoke commands for all profiles.
 
 -m MODE, --mode=MODE
     Invoke commands only for PCMs having mode *MODE*. *MODE* may be "sink" or
     "source". The default is to invoke commands for both modes.
 
 -s, --status[=PROPLIST]
-	Invoke the *COMMAND* also when the status of the given PCM properties
-	changes. *PROPLIST* is a comma-separated list of property names. Permissible
-	names are "Running", "SoftVolume" and "Delay". If *PROPLIST* is not given
-	then only changes to the "Running" state are active. See COMMAND_ below.
+    Invoke the *COMMAND* also when the status of the given PCM properties
+    changes. *PROPLIST* is a comma-separated list of property names.
+    Permissible names are "Running", "SoftVolume" and "Delay". If *PROPLIST*
+    is not given then only changes to the "Running" state are active.
+    See COMMAND_ below.
 
 COMMAND
 =======
@@ -146,7 +148,7 @@ These variables are set for all events:
     The Bluetooth transport role, for example ``A2DP-source`` or ``HFP-AG``.
 
   ``BLUEALSA_PCM_PROPERTY_TRANSPORT_TYPE``
-    The Bluetooth transport type, either ``A2DP`` or ``SCO``.
+    The Bluetooth transport type, for example ``A2DP``, ``ASHA`` or ``SCO``.
 
 When *--status* is used, then additional environment variables are also set
 for the "added" and "update" events as determined by the *PROPLIST*.

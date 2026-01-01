@@ -1,6 +1,6 @@
 /*
  * bluealsa-autoconfig - agent.c
- * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
  * SPDX-License-Identifier: MIT
  */
 
@@ -32,6 +32,7 @@
 enum bluealsa_profile {
 	PROFILE_ALL = 0,
 	PROFILE_A2DP = BA_PCM_TRANSPORT_MASK_A2DP,
+	PROFILE_ASHA = BA_PCM_TRANSPORT_MASK_ASHA,
 	PROFILE_SCO = BA_PCM_TRANSPORT_MASK_SCO,
 };
 
@@ -78,7 +79,7 @@ struct bluealsa_agent {
 	bool program_is_dir;
 	char **progs;
 	size_t prog_count;
-	enum bluealsa_profile profile;
+	uint16_t profiles;
 	enum bluealsa_mode mode;
 	uint8_t properties;
 	struct {
@@ -97,8 +98,8 @@ typedef struct {
 static struct bluealsa_agent agent = { 0 };
 
 static bool bluealsa_agent_filter(const struct ba_pcm *pcm) {
-	const bool profile_match = (agent.profile == PROFILE_ALL) ||
-									(agent.profile & pcm->transport);
+	const bool profile_match = (agent.profiles == PROFILE_ALL) ||
+									(agent.profiles & pcm->transport);
 	const bool mode_match = (agent.mode == MODE_ALL) || (pcm->mode == agent.mode);
  	return profile_match && mode_match;
 }
@@ -495,13 +496,15 @@ int main(int argc, char *argv[]) {
 					"\nOptions:\n"
 					"  -h, --help\t\t\tprint this help and exit\n"
 					"  -V, --version\t\t\tprint version and exit\n"
-					"  -p, --profile=[a2dp|sco]\tselect only given profile\n"
+					"  -p, --profile=[a2dp|asha|sco]\tselect only given profile\n"
 					"  -m, --mode=[sink|source]\tselect only given mode\n"
 					"  -B, --dbus=NAME\t\tBlueALSA service name suffix\n"
-					"  -s, --status[=PROPLIST]\t\thandle status change events\n"
+					"  -s, --status[=PROPLIST]\thandle status change events\n"
+					"\n  The options --profile and --dbus may be given more "
+					"than once to select multiple profiles and/or services\n"
 					"\nPROGRAM:\n"
-					"  path to program, or directory of programs, to be run "
-					"when BlueALSA event occurs\n",
+					"  absolute path to program, or directory of programs, to "
+					"be run when a BlueALSA event occurs\n",
 					argv[0]);
 			return EXIT_SUCCESS;
 
@@ -509,11 +512,13 @@ int main(int argc, char *argv[]) {
 			printf("%s\n", PACKAGE_VERSION);
 			return EXIT_SUCCESS;
 
-		case 'p' /* --profile=[a2dp|sco] */ : {
+		case 'p' /* --profile=[a2dp|asha|sco] */ : {
 			if (strcmp(optarg, "a2dp") == 0)
-				agent.profile = PROFILE_A2DP;
+				agent.profiles |= PROFILE_A2DP;
+			else if (strcmp(optarg, "asha") == 0)
+				agent.profiles |= PROFILE_ASHA;
 			else if (strcmp(optarg, "sco") == 0)
-				agent.profile = PROFILE_SCO;
+				agent.profiles |= PROFILE_SCO;
 			else {
 				fprintf(stderr, "Invalid profile (%s)\n", optarg);
 				return EXIT_FAILURE;

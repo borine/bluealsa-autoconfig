@@ -1,5 +1,5 @@
 # bluealsa-autoconfig - meson.build
-# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine/>
+# SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine/>
 # SPDX-License-Identifier: MIT
 
 project('bluealsa-autoconfig', 'c', version: '0.5.1', license: 'MIT')
@@ -9,11 +9,11 @@ assert(prefix.startswith('/'), 'Prefix is not absolute: "@0@"'.format(prefix))
 
 bashcompletion = dependency('bash-completion', required: false)
 
-bindir = prefix /  get_option('bindir')
-mandir = prefix / get_option('mandir')
-docdir = prefix / get_option('datadir') / 'doc'
 alsaconfdir = '/etc/alsa/conf.d'
-alsadatadir = '/usr/share/alsa/alsa.conf.d'
+bindir = prefix /  get_option('bindir')
+confdir = prefix / get_option('datadir') / 'bluealsa-autoconfig'
+docdir = prefix / get_option('datadir') / 'doc'
+mandir = prefix / get_option('mandir')
 
 conf_data = configuration_data()
 conf_data.set('prefix', prefix)
@@ -79,16 +79,28 @@ asound_module = shared_library(
 	install_dir: alsa_plugin_dir,
 )
 
+autoconf_alsa_conf = configure_file(
+	input: '21-bluealsa-autoconfig.conf.in',
+	output: '21-bluealsa-autoconfig.conf',
+	configuration: configuration_data({'CONFDIR' : confdir})
+)
+
 install_data(
-	'21-bluealsa-autoconfig.conf',
-	install_dir: alsadatadir,
+	autoconf_alsa_conf,
+	install_dir: confdir,
+	install_mode: ['rw-r--r--', 'root', 'root']
+)
+
+install_data(
+	'default-devices.conf',
+	install_dir: confdir,
 	install_mode: ['rw-r--r--', 'root', 'root']
 )
 
 install_symlink(
 	'21-bluealsa-autoconfig.conf',
 	install_dir : alsaconfdir,
-	pointing_to : alsadatadir / '21-bluealsa-autoconfig.conf',
+	pointing_to : confdir / '21-bluealsa-autoconfig.conf',
 )
 
 subdir('systemd')

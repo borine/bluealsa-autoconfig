@@ -1,14 +1,37 @@
-# SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+# SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
 # SPDX-License-Identifier: MIT
+
+
+# helper function gets dbus services
+# note that this function does not detect if default service (no suffix) is running.
+_bluealsa_autoconfig_list_dbus_suffices() {
+	dbus-send --system --dest=org.freedesktop.DBus --type=method_call \
+		--print-reply /org/freedesktop/DBus \
+		org.freedesktop.DBus.ListNames 2>/dev/null | \
+		while read -r line; do
+			[[ $line =~ org\.bluealsa\.([^'"']+) ]] || continue
+			echo "${BASH_REMATCH[1]}"
+		done
+}
 
 # completion function for bluealsa-autoconfig
 _bluealsa_autoconfig() {
 	local cur prev words cword split
 	_init_completion -s || return
-	if [[ "$prev" = "--dbus" ]] ; then
-		COMPREPLY=()
+	case "$prev" in
+	--dbus|-B)
+		_have dbus-send || return
+		readarray -t list < <(_bluealsa_autoconfig_list_dbus_suffices)
+		readarray -t COMPREPLY < <(compgen -W "${list[*]}" -- "$cur")
 		return
-	fi
+			;;
+	esac
+	case "$cur" in
+	-B|-d|-u|-h|-V)
+		COMPREPLY=( "$cur" )
+		return
+		;;
+	esac
 	COMPREPLY=( $(compgen -W "$(_parse_help $1)" -- $cur) )
 	[[ $COMPREPLY == *= ]] && compopt -o nospace
 }
@@ -48,33 +71,51 @@ _bluealsa_agent() {
 	local cur prev words cword split
 	_init_completion -s || return
 	case "$prev" in
-	"--dbus")
-		COMPREPLY=()
+	--dbus|-B)
+		_have dbus-send || return
+		readarray -t list < <(_bluealsa_autoconfig_list_dbus_suffices)
+		readarray -t COMPREPLY < <(compgen -W "${list[*]}" -- "$cur")
 		return
 		;;
-	"--mode")
+	--mode|-m)
 		COMPREPLY=( $(compgen -W "sink source" -- $cur) )
 		return
 		;;
-	"--profile")
-		COMPREPLY=( $(compgen -W "a2dp sco" -- $cur) )
+	--profile|-p)
+		COMPREPLY=( $(compgen -W "a2dp asha sco" -- $cur) )
 		return
 		;;
-	"--status")
-		if [[ "${words[cword]}" == "" ]] ; then
-			COMPREPLY=( "--status=" )
-			compopt -o nospace
-		else
+	--status)
+		if [[ "${words[cword]}" == *=* ]] ; then
 			_bluealsa_agent_status_properties
+			return;
 		fi
+		;;
+	-s)
+		_bluealsa_agent_status_properties
 		return;
+		;;
+	esac
+	case "$cur" in
+	-B|-m|-p|-h|-V)
+		COMPREPLY=( "$cur" )
+		return
+		;;
+	-s*)
+		local orig_cur="$cur"
+		cur=${cur:2}
+		_bluealsa_agent_status_properties
+		cur="$orig_cur"
+		[[ ${#COMPREPLY[@]} -eq 1 ]] && COMPREPLY[0]="-s${COMPREPLY[0]}"
+		return
 		;;
 	esac
 	if [[ "$cur" == "-"* ]] ; then
 		COMPREPLY=( $(compgen -W "$(_parse_help $1)" -- $cur) )
+		[[ $COMPREPLY == "--status" ]] && COMPREPLY=( "--status=" )
 		[[ $COMPREPLY == *= ]] && compopt -o nospace
 	else
-		COMPREPLY=( $(compgen -f $cur) )
+		_filedir
 	fi
 }
 

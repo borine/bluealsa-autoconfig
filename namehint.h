@@ -1,9 +1,10 @@
 /*
  * bluealsa-autoconfig - namehint.h
- * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
  * SPDX-License-Identifier: MIT
  */
 
+#pragma once
 #ifndef BLUEALSA_AUTOCONFIG_NAMEHINT_H
 #define BLUEALSA_AUTOCONFIG_NAMEHINT_H
 

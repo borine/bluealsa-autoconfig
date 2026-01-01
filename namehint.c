@@ -1,6 +1,6 @@
 /*
  * bluealsa-autoconfig - namehint.c
- * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
  * SPDX-License-Identifier: MIT
  */
 
@@ -23,9 +23,24 @@ typedef enum {
 
 typedef enum {
 	PROFILE_A2DP,
+	PROFILE_ASHA,
 	PROFILE_HFP,
 	PROFILE_HSP,
 } profile_t;
+
+typedef enum {
+	PROFILE_TYPE_A2DP,
+	PROFILE_TYPE_ASHA,
+	PROFILE_TYPE_SCO,
+	NUM_PROFILE_TYPES,
+} profile_type_t;
+
+/* Note - the order of this array must match profile_type_t */
+static const char *profile_type_name[] = {
+	"a2dp",
+	"asha",
+	"sco",
+};
 
 struct bluealsa_namehint_device {
 	unsigned int id;
@@ -66,11 +81,12 @@ struct bluealsa_namehint {
 static const struct {
 	profile_t profile;
 	const char *name;
-	const char *type;
+	profile_type_t type;
 } profiles[] = {
-	{ PROFILE_A2DP, "A2DP", "a2dp" },
-	{ PROFILE_HFP,  "HFP",  "sco" },
-	{ PROFILE_HSP,  "HSP",  "sco" }
+	{ PROFILE_A2DP, "A2DP", PROFILE_TYPE_A2DP },
+	{ PROFILE_ASHA, "ASHA", PROFILE_TYPE_ASHA },
+	{ PROFILE_HFP,  "HFP",  PROFILE_TYPE_SCO },
+	{ PROFILE_HSP,  "HSP",  PROFILE_TYPE_SCO },
 };
 
 static struct {
@@ -91,7 +107,7 @@ static struct bluealsa_namehint_device *bluealsa_namehint_device_get(struct blue
 	if (node != NULL)
 		return node;
 
-	node = calloc(sizeof(struct bluealsa_namehint_device), 1);
+	node = calloc(1, sizeof(struct bluealsa_namehint_device));
 	if (node == NULL)
 		return NULL;
 
@@ -163,20 +179,24 @@ static struct bluealsa_namehint_hint *bluealsa_namehint_hint_get(struct bluealsa
 		node = node->next;
 	}
 	if (node == NULL) {
-		node = calloc(sizeof(struct bluealsa_namehint_hint), 1);
+		node = calloc(1, sizeof(struct bluealsa_namehint_hint));
 		if (node == NULL)
 			return NULL;
 
-		node->id = hint->next_id++;
-		node->device = device;
-		bluealsa_namehint_device_ref(hint, device);
-		node->transport = pcm->transport;
-		if (pcm->transport & BA_PCM_TRANSPORT_MASK_HFP)
+		if (pcm->transport & BA_PCM_TRANSPORT_MASK_A2DP)
+			node->profile = PROFILE_A2DP;
+		else if (pcm->transport & BA_PCM_TRANSPORT_MASK_ASHA)
+			node->profile = PROFILE_ASHA;
+		else if (pcm->transport & BA_PCM_TRANSPORT_MASK_HFP)
 			node->profile = PROFILE_HFP;
 		else if (pcm->transport & BA_PCM_TRANSPORT_MASK_HSP)
 			node->profile = PROFILE_HSP;
 		else
-			node->profile = PROFILE_A2DP;
+			return NULL;
+		node->id = hint->next_id++;
+		node->device = device;
+		bluealsa_namehint_device_ref(hint, device);
+		node->transport = pcm->transport;
 		node->stream |= pcm->mode & BA_PCM_MODE_SOURCE ? STREAM_CAPTURE : STREAM_PLAYBACK;
 		strcpy(node->codec, pcm->codec.name);
 		if (prev == NULL)
@@ -237,11 +257,39 @@ static bool bluealsa_has_ctl_arg(snd_config_t *root, snd_config_t *ctl, const ch
 	return result >= 0;
 }
 
+static void bluealsa_namehint_print_default_pcm(FILE *file, const char *addr, const char *profile, const char *stream, const char *service) {
+	fprintf(file, "%s.%s \"pcm.bluealsa:DEV=%s,PROFILE=%s,SRV=%s\"\n",
+				stream,
+				profile,
+				addr,
+				profile,
+				service);
+	fprintf(file, "pcm.%s.hint.description { @func refer name defaults.bluealsa.default.pcm.description }\n", profile);
+
+}
+
+static void bluealsa_namehint_print_default_ctl(FILE *file, const char *addr, const char *profile, const char *service) {
+		/* alsa-lib "empty" ctl plugin fails if we create a reference here,
+		 * so we resort to an explicit config definition. */
+		fprintf(file, "ctl.%s { type bluealsa device \"%s\" service \"%s\"", profile, addr, service);
+		if (bluealsa_config.has_ctl_bat_arg)
+			fprintf(file, " battery { @func refer name defaults.bluealsa.ctl.battery }");
+		if (bluealsa_config.has_ctl_btt_arg)
+			fprintf(file, " bttransport { @func refer name defaults.bluealsa.ctl.bttransport }");
+		if (bluealsa_config.has_ctl_dyn_arg)
+			fprintf(file, " dynamic { @func refer name defaults.bluealsa.ctl.dynamic }");
+		if (bluealsa_config.has_ctl_ext_arg)
+			fprintf(file, " extended { @func refer name defaults.bluealsa.ctl.extended }");
+		fprintf(file, "hint.description { @func refer name defaults.bluealsa.default.ctl.description }");
+		fprintf(file, "}\n");
+}
+
+
 /**
  * Allocate and initialize a new bluealsa_namehint structure.
  */
 int bluealsa_namehint_init(struct bluealsa_namehint **hint) {
-	*hint = calloc(sizeof(struct bluealsa_namehint), 1);
+	*hint = calloc(1, sizeof(struct bluealsa_namehint));
 	if (*hint == NULL)
 		return -1;
 
@@ -263,7 +311,7 @@ int bluealsa_namehint_init(struct bluealsa_namehint **hint) {
 
 /**
  * Add a new pcm to a namehint container, if it does not already exist in the
- * container (a duplex pcm device is reported as 2 distinct pcms bt bluealsa)
+ * container (a duplex pcm device is reported as 2 distinct pcms by bluealsa)
  * @param hint the namehint container.
  * @param pcm properties of added pcm.
  * @param client interface to bluealsa
@@ -281,7 +329,7 @@ bool bluealsa_namehint_pcm_add(struct bluealsa_namehint *hint, const struct ba_p
 	if (node != NULL)
 		return false;
 
-	node = calloc(sizeof(struct bluealsa_namehint_pcm), 1);
+	node = calloc(1, sizeof(struct bluealsa_namehint_pcm));
 	if (node == NULL)
 		return false;
 
@@ -510,7 +558,7 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 		fprintf(file, "namehint.pcm._bluealsa%u \"bluealsa:DEV=%s,PROFILE=%s%s%s%s%s%s\"\n",
 			h->id,
 			h->device->hex_addr,
-			profiles[h->profile].type,
+			profile_type_name[profiles[h->profile].type],
 			with_service ? ",SRV=" : "",
 			with_service ? h->device->service : "",
 			desc_separator,
@@ -533,6 +581,7 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 
 	const char *show = hint->pcms == NULL ? "off" : "on";
 	fprintf(file, "bluealsa.pcm.hint.show %1$s\nbluealsa.ctl.hint.show %1$s\n", show);
+	fprintf(file, "bluealsa.ctl.hint.show %1$s\nbluealsa.ctl.hint.show %1$s\n", show);
 
 	return 0;
 }
@@ -544,37 +593,43 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
  */
 void bluealsa_namehint_print_default(struct bluealsa_namehint *hint, FILE *file) {
 	enum {
-		CAPTURE_A2DP,
-		PLAYBACK_A2DP,
-		CAPTURE_SCO,
-		PLAYBACK_SCO,
+		CAPTURE,
+		PLAYBACK
 	};
 
 	struct bluealsa_namehint_pcm *pcm = hint->pcms;
-	struct bluealsa_namehint_pcm *defaults[4] = { 0 };
+	struct bluealsa_namehint_pcm *defaults[2][NUM_PROFILE_TYPES] = { 0 };
 
 	while (pcm != NULL) {
 		switch (pcm->stream) {
 		case STREAM_CAPTURE:
 			if (pcm->hint->profile == PROFILE_A2DP)
-				defaults[CAPTURE_A2DP] = pcm;
+				defaults[CAPTURE][PROFILE_TYPE_A2DP] = pcm;
+			else if (pcm->hint->profile == PROFILE_ASHA)
+				defaults[CAPTURE][PROFILE_TYPE_ASHA] = pcm;
 			else
-				defaults[CAPTURE_SCO] = pcm;
+				defaults[CAPTURE][PROFILE_TYPE_SCO] = pcm;
 			break;
 		case STREAM_PLAYBACK:
 			if (pcm->hint->profile == PROFILE_A2DP)
-				defaults[PLAYBACK_A2DP] = pcm;
+				defaults[PLAYBACK][PROFILE_TYPE_A2DP] = pcm;
+			else if (pcm->hint->profile == PROFILE_ASHA)
+				defaults[PLAYBACK][PROFILE_TYPE_ASHA] = pcm;
 			else
-				defaults[PLAYBACK_SCO] = pcm;
+				defaults[PLAYBACK][PROFILE_TYPE_SCO] = pcm;
 			break;
-		default:
+		default: /* duplex stream */
 			if (pcm->hint->profile == PROFILE_A2DP) {
-				defaults[CAPTURE_A2DP] = pcm;
-				defaults[PLAYBACK_A2DP] = pcm;
+				defaults[CAPTURE][PROFILE_TYPE_A2DP] = pcm;
+				defaults[PLAYBACK][PROFILE_TYPE_A2DP] = pcm;
+			}
+			else if (pcm->hint->profile == PROFILE_ASHA) {
+				defaults[CAPTURE][PROFILE_TYPE_ASHA] = pcm;
+				defaults[PLAYBACK][PROFILE_TYPE_ASHA] = pcm;
 			}
 			else {
-				defaults[CAPTURE_SCO] = pcm;
-				defaults[PLAYBACK_SCO] = pcm;
+				defaults[CAPTURE][PROFILE_TYPE_SCO] = pcm;
+				defaults[PLAYBACK][PROFILE_TYPE_SCO] = pcm;
 			}
 			break;
 		}
@@ -582,69 +637,69 @@ void bluealsa_namehint_print_default(struct bluealsa_namehint *hint, FILE *file)
 		pcm = pcm->next;
 	}
 
-	if (defaults[CAPTURE_A2DP] != NULL)
-		fprintf(file, "capture.a2dp \"pcm.bluealsa:DEV=%s,PROFILE=a2dp,SRV=%s\"\n",
-					defaults[CAPTURE_A2DP]->device->hex_addr,
-					defaults[CAPTURE_A2DP]->device->service);
-	if (defaults[PLAYBACK_A2DP] != NULL)
-		fprintf(file, "playback.a2dp \"pcm.bluealsa:DEV=%s,PROFILE=a2dp,SRV=%s\"\n",
-					defaults[PLAYBACK_A2DP]->device->hex_addr,
-					defaults[PLAYBACK_A2DP]->device->service);
-	if (defaults[CAPTURE_SCO] != NULL)
+	if (defaults[CAPTURE][PROFILE_TYPE_A2DP] != NULL)
+		bluealsa_namehint_print_default_pcm(file,
+				defaults[CAPTURE][PROFILE_TYPE_A2DP]->device->hex_addr,
+				"a2dp",
+				"capture",
+				defaults[CAPTURE][PROFILE_TYPE_A2DP]->device->service);
+	if (defaults[PLAYBACK][PROFILE_TYPE_A2DP] != NULL)
+		bluealsa_namehint_print_default_pcm(file,
+				defaults[PLAYBACK][PROFILE_TYPE_A2DP]->device->hex_addr,
+				"a2dp",
+				"playback",
+				defaults[PLAYBACK][PROFILE_TYPE_A2DP]->device->service);
+	if (defaults[CAPTURE][PROFILE_TYPE_ASHA] != NULL)
+		bluealsa_namehint_print_default_pcm(file,
+				defaults[CAPTURE][PROFILE_TYPE_ASHA]->device->hex_addr,
+				"asha",
+				"capture",
+				defaults[CAPTURE][PROFILE_TYPE_ASHA]->device->service);
+	if (defaults[PLAYBACK][PROFILE_TYPE_ASHA] != NULL)
+		bluealsa_namehint_print_default_pcm(file,
+				defaults[PLAYBACK][PROFILE_TYPE_ASHA]->device->hex_addr,
+				"asha",
+				"playback",
+				defaults[PLAYBACK][PROFILE_TYPE_ASHA]->device->service);
+	if (defaults[CAPTURE][PROFILE_TYPE_SCO] != NULL)
 		fprintf(file, "capture.sco \"pcm.bluealsa:DEV=%s,PROFILE=sco,SRV=%s\"\n",
-					defaults[CAPTURE_SCO]->device->hex_addr,
-					defaults[CAPTURE_SCO]->device->service);
-	if (defaults[PLAYBACK_SCO] != NULL)
-		fprintf(file, "playback.sco \"pcm.bluealsa:DEV=%s,PROFILE=sco,SRV=%s\"\n",
-					defaults[PLAYBACK_SCO]->device->hex_addr,
-					defaults[PLAYBACK_SCO]->device->service);
+					defaults[CAPTURE][PROFILE_TYPE_SCO]->device->hex_addr,
+					defaults[CAPTURE][PROFILE_TYPE_SCO]->device->service);
+	if (defaults[PLAYBACK][PROFILE_TYPE_SCO] != NULL)
+		bluealsa_namehint_print_default_pcm(file,
+				defaults[PLAYBACK][PROFILE_TYPE_SCO]->device->hex_addr,
+				"sco",
+				"playback",
+				defaults[PLAYBACK][PROFILE_TYPE_SCO]->device->service);
 
-	if (alsa_version_id() >= 0x010205) {
-		/* ctl default requires features introduced in alsa-lib release 1.2.5 */
-
-		if (defaults[PLAYBACK_A2DP] == NULL && defaults[PLAYBACK_SCO] == NULL)
-			return;
-
-		const char *addr = NULL;
-		const char *service;
-
-		if (defaults[PLAYBACK_A2DP] != NULL) {
-			addr = defaults[PLAYBACK_A2DP]->device->hex_addr;
-			service = defaults[PLAYBACK_A2DP]->device->service;
+	bool print_description = false;
+	for (size_t p = 0; p < NUM_PROFILE_TYPES; p++) {
+		if (defaults[PLAYBACK][p] != NULL) {
+			print_description = true;
+			if (defaults[CAPTURE][p] == NULL ||
+						strcmp(defaults[PLAYBACK][p]->device->hex_addr,
+								defaults[CAPTURE][p]->device->hex_addr) == 0)
+					bluealsa_namehint_print_default_ctl(file,
+									defaults[PLAYBACK][p]->device->hex_addr,
+									profile_type_name[p],
+									defaults[PLAYBACK][p]->device->service);
+			else
+					bluealsa_namehint_print_default_ctl(file,
+									"ff:ff:ff:ff:ff:ff",
+									profile_type_name[p],
+									defaults[PLAYBACK][p]->device->service);
 		}
-
-		if (defaults[PLAYBACK_SCO] != NULL) {
-			if (defaults[PLAYBACK_A2DP] == NULL) {
-				addr = defaults[PLAYBACK_SCO]->device->hex_addr;
-				service = defaults[PLAYBACK_SCO]->device->service;
-			}
-			else if (strcmp(defaults[PLAYBACK_SCO]->device->service, defaults[PLAYBACK_A2DP]->device->service) == 0 && strcmp(defaults[PLAYBACK_SCO]->device->hex_addr, defaults[PLAYBACK_A2DP]->device->hex_addr) != 0) {
-				service = defaults[PLAYBACK_A2DP]->device->service;
-				addr = "FF:FF:FF:FF:FF:FF";
-			}
+		else if (defaults[CAPTURE][p] != NULL) {
+			print_description = true;
+			bluealsa_namehint_print_default_ctl(file,
+							defaults[CAPTURE][p]->device->hex_addr,
+							profile_type_name[p],
+							defaults[CAPTURE][p]->device->service);
 		}
-
-		if (addr == NULL)
-			return;
-
-		/* alsa-lib "empty" ctl plugin fails if we create a reference here,
-		 * so we resort to an explicit config definition. */
-		fprintf(file, "ctl { type bluealsa device \"%s\" service \"%s\"", addr, service);
-
-		if (bluealsa_config.has_ctl_bat_arg)
-			fprintf(file, " battery { @func refer name defaults.bluealsa.ctl.battery }");
-
-		if (bluealsa_config.has_ctl_btt_arg)
-			fprintf(file, " bttransport { @func refer name defaults.bluealsa.ctl.bttransport }");
-
-		if (bluealsa_config.has_ctl_dyn_arg)
-			fprintf(file, " dynamic { @func refer name defaults.bluealsa.ctl.dynamic }");
-
-		if (bluealsa_config.has_ctl_ext_arg)
-			fprintf(file, " extended { @func refer name defaults.bluealsa.ctl.extended }");
-
-		fprintf(file, "}\n");
 	}
+
+	if (print_description)
+		fprintf(file, "ctl.description { @func refer name defaults.bluealsa.default.ctl.description }\n");
 
 }
 

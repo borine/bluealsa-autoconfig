@@ -1,0 +1,41 @@
+# BlueALSA autoconfig definitions
+# SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine/>
+# SPDX-License-Identifier: MIT
+
+# these may be redefined by user
+defaults.bluealsa.default.profile defaults.bluealsa.profile
+defaults.bluealsa.default.stream duplex
+defaults.bluealsa.default.pcm.fallback pcm.sysdefault
+defaults.bluealsa.default.pcm.description "Default PCM device (currently BlueALSA)"
+defaults.bluealsa.default.pcm.fallback_description "Default PCM device"
+defaults.bluealsa.default.ctl.fallback ctl.sysdefault
+defaults.bluealsa.default.ctl.description "Default control device (currently BlueALSA)"
+defaults.bluealsa.default.ctl.fallback_description "Default control device"
+
+bluealsa.pcm.default bluealsa.autoconfig.pcm.default
+bluealsa.ctl.default bluealsa.autoconfig.ctl.default
+
+# causes the generic "bluealsa" pcm to be displayed in PCM listings only
+# when there is at least one BlueALSA device connected
+pcm.bluealsa.hint.show {
+	@func refer
+	name bluealsa.pcm.hint.show
+	default off
+}
+
+# causes the generic "bluealsa" ctl to be displayed in CTL listings only
+# when there is at least one BlueALSA device connected
+ctl.bluealsa.hint.show {
+	@func refer
+	name bluealsa.ctl.hint.show
+	default off
+}
+
+# load autoconfig default device definitions only on demand
+bluealsa.autoconfig.@hooks [
+	{
+		func load
+		files [ "@CONFDIR@/default-devices.conf" ]
+		errors true
+	}
+]

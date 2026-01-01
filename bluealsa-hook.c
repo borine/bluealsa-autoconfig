@@ -1,54 +1,22 @@
 /*
  * bluealsa-autoconfig - bluealsa-hook.c
- * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
  * SPDX-License-Identifier: MIT
  */
 
 #include <alsa/asoundlib.h>
 #include <alsa/conf.h>
+#include <sys/stat.h>
 
-#define AUTOCONFIG_DATA_FILE "/run/bluealsa-autoconfig/defaults.conf"
+#include "autoconfig-filepaths.h"
 
-/**
- * Restore the bluealsa autoconfig hook.
- * libasound detaches the @hooks node from the root tree before calling this
- * function, then deletes it when we return. So we need to create a new
- * copy and add that in place of the original to ensure our hook is invoked each
- * time the application opens the autoconfig node. */
-static void restore_hook_func(snd_config_t *root) {
-	snd_config_t *hooks = NULL, *hook0, *node;
-	int err;
-
-	if ((err = snd_config_make_compound(&hooks, "@hooks", 0)) < 0)
-		goto fail;
-
-	if ((err = snd_config_make_compound(&hook0, "0", 0)) < 0)
-		goto fail;
-	if ((err = snd_config_add(hooks, hook0)) < 0) {
-		snd_config_delete(hook0);
-		goto fail;
-	}
-
-	if ((err = snd_config_imake_string(&node, "func", "bluealsa_autoconfig")) < 0 )
-		goto fail;
-	if ((err = snd_config_add(hook0, node)) < 0) {
-		snd_config_delete(node);
-		goto fail;
-	}
-
-	if ((err = snd_config_add(root, hooks)) < 0)
-		goto fail;
-
-	return;
-
-fail:
-	SNDERR("Cannot re-create BlueALSA autoconfig hook_func: %s", snd_strerror(err));
-	if (hooks != NULL)
-		snd_config_delete(hooks);
-}
+/* libasound locks its config mutex before calling hook functions, so it is
+ * safe to store the last modification time of the defaults file in a global
+ * static variable. */
+static struct timespec last_change = { 0 };
 
 /**
- * @param root the configuration root node (ie bluealsa.autoconfig)
+ * @param root the configuration root node (ie bluealsa.autoconfig.dynamic)
  * @param config the config node of the hook (ie bluealsa.autoconfig.@hooks.0)
  * @param dst    address to place the result node (must set this to NULL)
  * @param private_data not used
@@ -61,43 +29,61 @@ int bluealsa_autoconfig (
 	(void) config;
 	(void) private_data;
 
-	snd_config_t *def;
+	snd_config_t *hook_func, *hooks;
 	snd_input_t *in;
+	struct stat statbuf;
+
 	int ret = 0;
 
 	assert(root && dst);
 	*dst = NULL;
 
-	if ((ret = snd_config_search(root, "default", &def)) == 0) {
-		if (snd_config_get_type(def) != SND_CONFIG_TYPE_COMPOUND) {
-			SNDERR("Invalid BlueALSA autoconfig default node");
-			return -EINVAL;
-		}
-		snd_config_delete_compound_members(def);
-	}
-	else {
-		if ((ret = snd_config_make_compound(&def, "default", 0)) < 0) {
-			SNDERR("Cannot create BlueALSA autoconfig default node");
-			return ret;
-		}
-		if ((ret = snd_config_add(root, def)) < 0) {
-			SNDERR("Cannot create BlueALSA autoconfig default node");
-			snd_config_delete(def);
-			return ret;
-		}
+	if ((ret = stat(BLUEALSA_AUTOCONFIG_DEFAULTS_FILE, &statbuf)) < 0) {
+		SNDERR("Cannot access file %s", BLUEALSA_AUTOCONFIG_DEFAULTS_FILE);
+		return ret;
 	}
 
-	restore_hook_func(root);
+	 if (statbuf.st_mtim.tv_sec == last_change.tv_sec &&
+				statbuf.st_mtim.tv_nsec == last_change.tv_nsec)
+		goto restore_hook;
 
-	ret = snd_input_stdio_open(&in, AUTOCONFIG_DATA_FILE, "r");
+	/* delete all child nodes except the hook_func definition */
+	if ((ret = snd_config_search(root, "hook_func", &hook_func)) < 0) {
+		SNDERR("Invalid BlueALSA autoconfig dynamic hook func");
+		return ret;
+	}
+	snd_config_remove(hook_func);
+	snd_config_delete_compound_members(root);
+	snd_config_add(root, hook_func);
+
+	/* load the updated default device config */
+	ret = snd_input_stdio_open(&in, BLUEALSA_AUTOCONFIG_DEFAULTS_FILE, "r");
 	if (ret >= 0) {
-		ret = snd_config_load(def, in);
+		ret = snd_config_load(root, in);
 		snd_input_close(in);
 	}
 	if (ret < 0) {
-		SNDERR("Cannot load BlueALSA autoconfig defaults file %s", AUTOCONFIG_DATA_FILE);
+		SNDERR("Cannot load BlueALSA autoconfig defaults file %s", BLUEALSA_AUTOCONFIG_DEFAULTS_FILE);
 		return ret;
 	}
+
+	last_change.tv_sec = statbuf.st_mtim.tv_sec;
+	last_change.tv_nsec = statbuf.st_mtim.tv_nsec;
+
+restore_hook:
+
+	/* libasound removes the @hooks node from the tree before calling this
+	 * function, then deletes it when this function returns. So we must create
+	 * a new @hooks node and move the hook config into it so that this
+	 * function is called each time the application accesses the autoconfig
+	 * dynamic node. */
+	if ((ret = snd_config_make_compound(&hooks, "@hooks", 0)) < 0) {
+		SNDERR("Cannot create BlueALSA autoconfig @hooks node");
+		return ret;
+	}
+	snd_config_remove(config);
+	snd_config_add(hooks, config);
+	snd_config_add(root, hooks);
 
 	return 0;
 }

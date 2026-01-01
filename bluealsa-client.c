@@ -1,6 +1,6 @@
 /*
  * bluealsa-autoconfig - bluealsa-client.c
- * SPDX-FileCopyrightText: 2024-2025 @borine <https://github.com/borine>
+ * SPDX-FileCopyrightText: 2024-2026 @borine <https://github.com/borine>
  * SPDX-License-Identifier: MIT
  */
 
@@ -310,11 +310,11 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 		}
 		case DBUS_TYPE_ARRAY: {
 			DBusMessageIter iter_vol;
-			uint8_t *data;
+			uint8_t *vol;
 			int len;
 			dbus_message_iter_recurse(iter, &iter_vol);
-			dbus_message_iter_get_fixed_array(&iter_vol, &data, &len);
-			memcpy(&props->volume, data, MIN(len, ARRAYSIZE(props->volume)));
+			dbus_message_iter_get_fixed_array(&iter_vol, &vol, &len);
+			memcpy(&props->volume, vol, MIN(len, ARRAYSIZE(props->volume)));
 			break;
 		}
 		default:
@@ -331,12 +331,12 @@ static DBusHandlerResult bluealsa_client_parse_pcm_property(const char *name, DB
 	else if (strcmp(name, "ChannelMap") == 0) {
 		if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_ARRAY)
 			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-		const char *data[ARRAYSIZE(props->channel_map)];
-		size_t length = ARRAYSIZE(data);
-		if (!dbus_message_iter_array_get_strings(iter, NULL, data, &length))
+		size_t length = ARRAYSIZE(props->channel_map);
+		const char *chmap[length];
+		if (!dbus_message_iter_array_get_strings(iter, NULL, chmap, &length))
 			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 		for (size_t i = 0; i < length; i++)
-			strncpy(props->channel_map[i], data[i], sizeof(props->channel_map[i]) - 1);
+			strncpy(props->channel_map[i], chmap[i], sizeof(props->channel_map[i]) - 1);
 		props->mask |= BLUEALSA_PCM_PROPERTY_CHANGED_CHANNEL_MAP;
 	}
 
@@ -426,7 +426,7 @@ static DBusHandlerResult bluealsa_client_dbus_signal_handler(DBusConnection *con
 
 int bluealsa_client_open(bluealsa_client_t *client, struct bluealsa_client_callbacks *callbacks) {
 	int ret = 0;
-	bluealsa_client_t new_client = calloc(sizeof(struct bluealsa_client), 1);
+	bluealsa_client_t new_client = calloc(1, sizeof(struct bluealsa_client));
 	if (new_client == NULL)
 		return -ENOMEM;
 
@@ -565,6 +565,10 @@ const char *bluealsa_client_transport_to_role(int transport_code) {
 		return "A2DP-source";
 	case BA_PCM_TRANSPORT_A2DP_SINK:
 		return "A2DP-sink";
+	case BA_PCM_TRANSPORT_ASHA_SOURCE:
+		return "ASHA-source";
+	case BA_PCM_TRANSPORT_ASHA_SINK:
+		return "ASHA-sink";
 	case BA_PCM_TRANSPORT_HFP_AG:
 		return "HFP-AG";
 	case BA_PCM_TRANSPORT_HFP_HF:
@@ -581,6 +585,8 @@ const char *bluealsa_client_transport_to_role(int transport_code) {
 const char *bluealsa_client_transport_to_type(int transport_code) {
 	if (transport_code & BA_PCM_TRANSPORT_MASK_A2DP)
 		return "A2DP";
+	if (transport_code & BA_PCM_TRANSPORT_MASK_ASHA)
+		return "ASHA";
 	if (transport_code & BA_PCM_TRANSPORT_MASK_SCO)
 		return "SCO";
 	return NULL;
@@ -617,6 +623,8 @@ const char *bluealsa_client_format_to_string(int pcm_format) {
 const char *bluealsa_client_transport_to_profile(int transport_code) {
 	if (transport_code & BA_PCM_TRANSPORT_MASK_A2DP)
 		return "A2DP";
+	if (transport_code & BA_PCM_TRANSPORT_MASK_ASHA)
+		return "ASHA";
 	else if (transport_code & BA_PCM_TRANSPORT_MASK_HFP)
 		return "HFP";
 	else if (transport_code & BA_PCM_TRANSPORT_MASK_HSP)
