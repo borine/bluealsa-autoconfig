@@ -17,8 +17,9 @@ static struct timespec last_change = { 0 };
 
 /**
  * @param root the configuration root node (ie bluealsa.autoconfig.dynamic)
- * @param config the config node of the hook (ie bluealsa.autoconfig.@hooks.0)
- * @param dst    address to place the result node (must set this to NULL)
+ * @param config the config node of the hook
+ *          (ie bluealsa.autoconfig.dynamic.@hooks.0)
+ * @param dst address to place the result node (must set this to NULL)
  * @param private_data not used
  */
 int bluealsa_autoconfig (
@@ -26,7 +27,6 @@ int bluealsa_autoconfig (
 			snd_config_t *config,
 			snd_config_t **dst,
 			snd_config_t *private_data) {
-	(void) config;
 	(void) private_data;
 
 	snd_config_t *hook_func, *hooks;
@@ -35,7 +35,7 @@ int bluealsa_autoconfig (
 
 	int ret = 0;
 
-	assert(root && dst);
+	assert(root && config && dst);
 	*dst = NULL;
 
 	if ((ret = stat(BLUEALSA_AUTOCONFIG_DEFAULTS_FILE, &statbuf)) < 0) {

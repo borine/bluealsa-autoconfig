@@ -581,7 +581,6 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 
 	const char *show = hint->pcms == NULL ? "off" : "on";
 	fprintf(file, "bluealsa.pcm.hint.show %1$s\nbluealsa.ctl.hint.show %1$s\n", show);
-	fprintf(file, "bluealsa.ctl.hint.show %1$s\nbluealsa.ctl.hint.show %1$s\n", show);
 
 	return 0;
 }
