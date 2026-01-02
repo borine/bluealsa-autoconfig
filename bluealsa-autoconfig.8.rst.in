@@ -56,7 +56,7 @@ OPTIONS
 
     This option may be useful for some applications (e.g. ``kodi(1)``) that do
     not refresh their audio device list unless a soundcard change is signalled
-    via ``udev``.
+    via ``udev``. See `UDEV EVENT`_ below.
 
 -d, --default
     Include a definition of a PCM that can be used as the ALSA **default** PCM
@@ -249,6 +249,47 @@ defaults.bluealsa.default.ctl.fallback_description
     The hint description to be used by the ``default`` CTL when it is not a
     BlueALSA mixer. By default the description is
     "Default control device"
+
+UDEV EVENT
+==========
+
+ALSA libasound has no built-in mechanism for informing an application when a
+sound card or other device supporting PCM or mixer devices is connected or
+disconnected from the system. Therefore applications that require this
+information must rely on signalling from some other source to obtain event
+notification.
+
+The Linux sound subsystem emits "change" event notifications via ``udev`` when
+pcm and control devices appear and disappear from the ``/dev/snd`` device
+directory. The Linux Bluetooth subsystem also emits ``udev`` events when
+remote devices connect and disconnect, but these notifications are generated
+**before** the Bluez `bluetoothd` daemon creates the relevant D-Bus objects
+and informs BlueALSA of the new profile connections. Therefore they are not
+useful to applications requiring notifications of changes to the ALSA
+configuration. To address this issue ``bluealsa-autoconfig`` generates
+synthesised sound system udev events when it has updated the ALSA
+configuration in the file system so that applications relying on this method
+are able to re-load their ALSA configurations from file when appropriate.
+
+This udev event generation is done only when ``bluealsa-autoconfig`` is run
+with the option ``--udev``. The event has to be associated with a real sound
+card in order for the kernel to accept it; so this feature does not work on
+systems with no sound cards attached. By default the event is associated with
+card 0, but a user can override this by defining a key in the ALSA
+configuration:
+::
+
+    defaults.bluealsa.udev_card 0
+
+This key can be set to a numeric card id or to the name of the card, for
+example:
+::
+
+    defaults.bluealsa.udev_card IQaudIODAC
+
+The key should be defined in a system-wide configuration
+file, it will not be read from a user's ``~/.asoundrc`` file. It is
+recommended to use ``/etc/asound.conf`` for this purpose.
 
 LIBASOUND VERSION DEPENDENCY
 ============================

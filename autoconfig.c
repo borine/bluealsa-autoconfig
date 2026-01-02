@@ -37,6 +37,7 @@ struct bluealsa_autoconfig {
 	struct bluealsa_namehint *hints;
 	int timeout;
 	char *pattern;
+	char udev_control[sizeof("/sys/class/sound/controlCXXX/uevent")];
 };
 
 static bool udev_events = false;
@@ -56,8 +57,34 @@ static void bluealsa_autoconfig_get_pattern(struct bluealsa_autoconfig *config) 
 	config->pattern = strdup(config_pattern);
 }
 
-static void bluealsa_autoconfig_udev_trigger(void) {
-	int fd = open("/sys/class/sound/controlC0/uevent", O_WRONLY);
+static void bluealsa_autoconfig_get_udev_control(struct bluealsa_autoconfig *config) {
+	snd_config_t *node;
+	char *card_str = NULL;
+	int card_index = 0;
+
+	if (snd_config_search(snd_config, "defaults.bluealsa.udev_card", &node) >= 0)
+		snd_config_get_ascii(node, &card_str);
+
+	if (card_str)
+		card_index = snd_card_get_index(card_str);
+
+	if (card_index >= 0 && card_index < 256) {
+		snprintf(config->udev_control, sizeof(config->udev_control),
+					"/sys/class/sound/controlC%hhu/uevent", card_index);
+	}
+	else {
+		if (card_str)
+			warn("ALSA card %s not found: udev events disabled", card_str);
+		else
+			warn("ALSA card %d not found: udev events disabled", card_index);
+		udev_events = false;
+	}
+
+	free(card_str);
+}
+
+static void bluealsa_autoconfig_udev_trigger(struct bluealsa_autoconfig *config) {
+	int fd = open(config->udev_control, O_WRONLY);
 	if (fd < 0) {
 		debug("Unable to simulate udev events: %s", strerror(errno));
 		udev_events = false;
@@ -208,7 +235,7 @@ static int bluealsa_autoconfig_commit_changes(struct bluealsa_autoconfig *config
 	rename(BLUEALSA_AUTOCONFIG_TEMP_FILE, BLUEALSA_AUTOCONFIG_CONFIG_FILE);
 
 	if (udev_events)
-		bluealsa_autoconfig_udev_trigger();
+		bluealsa_autoconfig_udev_trigger(config);
 
 	bluealsa_namehint_reset(config->hints);
 
@@ -306,6 +333,9 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 
 	bluealsa_autoconfig_get_pattern(&config);
+
+	if (udev_events)
+		bluealsa_autoconfig_get_udev_control(&config);
 
 	unsigned int index;
 	for (index = 0; index < services_count; index++) {
