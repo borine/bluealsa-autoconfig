@@ -134,13 +134,13 @@ This namehint can be disabled for
 any user by adding this definition to the ``~/.asoundrc`` file:
 ::
 
-    bluealsa.pcm.hint.show off
+    bluealsa.pcm.hint.!show off
 
 The text used in the namehint is taken from the BlueALSA configuration which
 can be changed for each user by adding this definition to ``~/.asoundrc``:
 ::
 
-    pcm.bluealsa.hint.description "My new bluealsa description"
+    pcm.bluealsa.hint.!description "My new bluealsa description"
 
 
 AUTOMATIC DEFAULT

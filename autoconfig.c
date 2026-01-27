@@ -100,7 +100,10 @@ static void bluealsa_autoconfig_udev_trigger(struct bluealsa_autoconfig *config)
 static int bluealsa_autoconfig_init_alsa(const char *progname) {
 	int fd;
 
-	snd_config_update();
+	if (snd_config_update() < 0) {
+		error("Cannot load ALSA config: %s\n", strerror(errno));
+		return -1;
+	}
 
 	/* Get the version of the **runtime** libasound2 */
 	alsa_version_init();

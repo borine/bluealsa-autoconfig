@@ -548,8 +548,10 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 	struct bluealsa_namehint_device *d = hint->devices;
 	unsigned int alsa_version = alsa_version_id();
 	const char *desc_separator = alsa_version >= 0x010203 ? "|" : "|DESC";
+	bool have_profile_type[NUM_PROFILE_TYPES] = { 0 };
 
 	while (h != NULL) {
+		have_profile_type[profiles[h->profile].type] = true;
 		char description[256];
 		int ret = bluealsa_namehint_hint_expand_description(h, pattern, description, 256);
 		if (ret < 0)
@@ -579,8 +581,14 @@ int bluealsa_namehint_print(const struct bluealsa_namehint *hint, FILE *file, co
 		d = d->next;
 	}
 
-	const char *show = hint->pcms == NULL ? "off" : "on";
-	fprintf(file, "bluealsa.pcm.hint.show %1$s\nbluealsa.ctl.hint.show %1$s\n", show);
+	for (profile_type_t	p = 0; p < NUM_PROFILE_TYPES; p++) {
+		if (have_profile_type[p]) {
+			fprintf(file, "bluealsa.autoconfig.pcm.hint.%s.show %s\n", profile_type_name[p], "on");
+		}
+	}
+
+	if (hint->pcms)
+		fprintf(file, "bluealsa.autoconfig.ctl.hint.show on\n");
 
 	return 0;
 }

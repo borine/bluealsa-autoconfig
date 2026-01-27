@@ -28,7 +28,6 @@ IPAddressDeny=any
 LockPersonality=true
 MemoryDenyWriteExecute=true
 NoNewPrivileges=true
-PrivateDevices=true
 PrivateNetwork=true
 PrivateTmp=true
 PrivateUsers=true
